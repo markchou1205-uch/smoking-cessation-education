@@ -1,3 +1,10 @@
+declare global {
+  interface Window {
+    skipToNext: () => void;
+    setWatchTime: (minutes: number) => void;
+    addWatchTime: (minutes: number) => void;
+  }
+}
 import React, { useState, useEffect } from 'react';
 import { User, Clock, CheckCircle, AlertTriangle, FileText, Calendar } from 'lucide-react';
 
@@ -345,7 +352,31 @@ const VideoPage = ({ onNext, studentData }: any) => {
     
     return () => clearInterval(interval);
   }, [isTimerRunning, isActive, startTime]);
-
+      // 添加全局測試函數到 window
+    window.skipToNext = () => {
+      console.log('開發者模式：跳過影片觀看時間限制');
+      onNext();
+    };
+    
+    window.setWatchTime = (minutes: number) => {
+      const seconds = minutes * 60;
+      setPlayTime(seconds);
+      console.log(`開發者模式：設定觀看時間為 ${minutes} 分鐘`);
+    };
+    
+    window.addWatchTime = (minutes: number) => {
+      const addSeconds = minutes * 60;
+      setPlayTime(prev => prev + addSeconds);
+      console.log(`開發者模式：增加觀看時間 ${minutes} 分鐘`);
+    };
+    
+    // 清理函數
+    return () => {
+      delete window.skipToNext;
+      delete window.setWatchTime;
+      delete window.addWatchTime;
+    };
+  }, [onNext, setPlayTime]);
   // 點擊影片區域的處理函數
   const handleVideoClick = () => {
     if (!isTimerRunning) {
