@@ -407,7 +407,7 @@ const VideoPage = ({ onNext, studentData }: any) => {
       <h2 className="text-xl font-semibold mb-6 flex items-center">
         <Clock className="mr-2" /> 收視戒菸宣導影片
       </h2>
-
+</div>
       {/* 影片播放器 */}
       <div className="bg-black rounded-lg mb-4" style={{ height: '400px' }}>
         <div className="flex items-center justify-center h-full text-white">
@@ -436,4 +436,26 @@ const VideoPage = ({ onNext, studentData }: any) => {
             onClick={handleNextVideo}
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
           >
-            {currentVideo < 3 ? '下一部' : '完成觀看'} 
+{currentVideo < 3 ? '下一部' : '完成觀看'}
+          </button>
+        )}
+        
+        <button
+          onClick={handleStop}
+          className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700"
+        >
+          停止
+        </button>
+      </div>
+
+      {/* 計時器和其他內容 */}
+      <div className="text-center mb-4">
+        <div className="text-lg font-medium">
+          當前影片觀看時間: {formatTime(playTime)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SmokingCessationApp;
