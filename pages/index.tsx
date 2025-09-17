@@ -318,7 +318,8 @@ const PersonalInfoPage = ({ onNext, studentData, setStudentData }: any) => {
 const VideoPage = ({ onNext, studentData }: any) => {
   const [currentVideo, setCurrentVideo] = useState(0);
   const [playTime, setPlayTime] = useState(0);
-  const [videoStartTime, setVideoStartTime] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [startTime, setStartTime] = useState(0);
   const [videoTimes, setVideoTimes] = useState([0, 0, 0, 0]);
   
   const { isActive, violations, violationLogs } = useAntiCheatMonitor();
@@ -330,41 +331,49 @@ const VideoPage = ({ onNext, studentData }: any) => {
     { id: 'QRKgpii2rDg', title: '第四部：成功戒菸案例' }
   ];
 
-  // 計時器 - 簡化邏輯
+  // 計時器
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (videoStartTime > 0 && isActive) {
+    if (isTimerRunning && isActive && startTime > 0) {
       interval = setInterval(() => {
         const currentTime = Date.now();
-        const elapsed = Math.floor((currentTime - videoStartTime) / 1000);
+        const elapsed = Math.floor((currentTime - startTime) / 1000);
         setPlayTime(elapsed);
       }, 1000);
     }
     
     return () => clearInterval(interval);
-  }, [videoStartTime, isActive]);
+  }, [isTimerRunning, isActive, startTime]);
 
-  const handleVideoStart = () => {
-    setVideoStartTime(Date.now());
-    setPlayTime(0);
-  };
-
-  const handleVideoEnd = () => {
-    // 記錄觀看時間
-    const newVideoTimes = [...videoTimes];
-    newVideoTimes[currentVideo] = playTime;
-    setVideoTimes(newVideoTimes);
+  // 點擊影片區域的處理函數
+  const handleVideoClick = () => {
+    if (!isTimerRunning) {
+      // 第一次點擊：開始計時
+      setStartTime(Date.now());
+      setIsTimerRunning(true);
+      setPlayTime(0);
+    } else {
+      // 第二次點擊：停止計時
+      setIsTimerRunning(false);
+    }
   };
 
   const handleNextVideo = () => {
-    handleVideoEnd();
-    setVideoStartTime(0);
+    // 記錄當前影片觀看時間
+    const newVideoTimes = [...videoTimes];
+    newVideoTimes[currentVideo] = playTime;
+    setVideoTimes(newVideoTimes);
+    
+    // 重置狀態
+    setIsTimerRunning(false);
+    setStartTime(0);
+    setPlayTime(0);
     
     if (currentVideo < 3) {
       setCurrentVideo(prev => prev + 1);
     } else {
-      const totalTime = videoTimes.reduce((sum, time) => sum + time, 0) + playTime;
+      const totalTime = newVideoTimes.reduce((sum, time) => sum + time, 0);
       if (totalTime > 300) { // 最少5分鐘
         onNext();
       } else {
@@ -381,39 +390,54 @@ const VideoPage = ({ onNext, studentData }: any) => {
         <Clock className="mr-2" /> 收視戒菸宣導影片
       </h2>
 
-      {/* YouTube 影片嵌入 */}
-      <div className="mb-4">
+      {/* 影片區域 - 添加 onClick */}
+      <div 
+        className="mb-4 cursor-pointer relative"
+        onClick={handleVideoClick}
+        title="點擊開始/停止計時"
+      >
         <iframe
           width="100%"
           height="400"
-          src={`https://www.youtube.com/embed/${videos[currentVideo].id}?enablejsapi=1&origin=${window.location.origin}`}
+          src={`https://www.youtube.com/embed/${videos[currentVideo].id}`}
           title={videos[currentVideo].title}
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
         ></iframe>
+        
+        {/* 計時狀態指示器 */}
+        <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white px-3 py-1 rounded text-sm">
+          {isTimerRunning ? '⏱️ 計時中' : '⏸️ 已暫停'}
+        </div>
       </div>
 
-      {/* 簡化的控制介面 */}
+      {/* 說明文字 */}
+      <div className="bg-blue-50 p-4 rounded-lg mb-4">
+        <h3 className="font-semibold mb-2">{videos[currentVideo].title}</h3>
+        <p className="text-sm text-gray-600">
+          💡 點擊影片區域開始計時，再次點擊暫停計時
+        </p>
+        <p className="text-sm text-gray-600">
+          ⚠️ 請保持視窗在前景，離開視窗會暫停計時
+        </p>
+      </div>
+
+      {/* 控制按鈕 */}
       <div className="text-center mb-4">
-        <div className="bg-blue-50 p-4 rounded-lg mb-4">
-          <h3 className="font-semibold mb-2">{videos[currentVideo].title}</h3>
-          <p className="text-sm text-gray-600">請直接使用影片播放器的控制按鈕</p>
-        </div>
-        
-        <button
-          onClick={handleVideoStart}
-          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 mr-4"
-        >
-          開始計時
-        </button>
-        
         <button
           onClick={handleNextVideo}
           className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+          disabled={playTime < 60} // 至少觀看1分鐘才能進入下一部
         >
           {currentVideo < 3 ? '下一部影片' : '完成觀看'}
         </button>
+        
+        {playTime < 60 && (
+          <p className="text-red-500 text-sm mt-2">
+            請至少觀看1分鐘後才能進入下一部影片
+          </p>
+        )}
       </div>
 
       {/* 時間顯示 */}
@@ -421,9 +445,9 @@ const VideoPage = ({ onNext, studentData }: any) => {
         <div className="text-lg font-medium">
           觀看時間: {Math.floor(playTime / 60)}分{playTime % 60}秒
         </div>
-        {!isActive && (
+        {!isActive && isTimerRunning && (
           <div className="text-red-600 font-medium mt-2">
-            ⚠️ 計時已暫停 - 請專心觀看
+            ⚠️ 計時已暫停 - 請回到視窗繼續觀看
           </div>
         )}
       </div>
@@ -438,6 +462,15 @@ const VideoPage = ({ onNext, studentData }: any) => {
             </div>
           )
         ))}
+        
+        {violations > 0 && (
+          <div className="mt-4">
+            <h5 className="font-medium text-red-600">違規記錄：</h5>
+            {violationLogs.slice(-3).map((log, index) => (
+              <div key={index} className="text-sm text-red-600">{log}</div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
