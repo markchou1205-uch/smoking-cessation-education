@@ -408,7 +408,6 @@ const VideoPage = ({ onNext, studentData }: any) => {
         <Clock className="mr-2" /> 收視戒菸宣導影片
       </h2>
 </div>
-      {/* 影片播放器 */}
       <div className="bg-black rounded-lg mb-4" style={{ height: '400px' }}>
         <div className="flex items-center justify-center h-full text-white">
           <div className="text-center">
