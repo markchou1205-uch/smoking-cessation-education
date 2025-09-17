@@ -6,24 +6,13 @@ const useAntiCheatMonitor = () => {
   const [isActive, setIsActive] = useState(true);
   const [violations, setViolations] = useState(0);
   const [violationLogs, setViolationLogs] = useState<string[]>([]);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
     const handleFocus = () => setIsActive(true);
     
     const handleBlur = () => {
-      // 如果正在播放影片，給予3秒寬限時間
-      if (isVideoPlaying) {
-        setTimeout(() => {
-          if (document.hidden) {
-            setIsActive(false);
-            addViolation('頁面被隱藏或最小化');
-          }
-        }, 3000);
-      } else {
-        setIsActive(false);
-        addViolation('視窗失去焦點');
-      }
+      setIsActive(false);
+      addViolation('視窗失去焦點');
     };
 
     const handleVisibilityChange = () => {
@@ -332,7 +321,7 @@ const VideoPage = ({ onNext, studentData }: any) => {
   const [videoStartTime, setVideoStartTime] = useState(0);
   const [videoTimes, setVideoTimes] = useState([0, 0, 0, 0]);
   
-  const { isActive, violations, violationLogs, setIsVideoPlaying } = useAntiCheatMonitor();
+  const { isActive, violations, violationLogs } = useAntiCheatMonitor();
 
   const videos = [
     { id: 'z6AR_Rz3PWc', title: '第一部：戒菸的重要性' },
@@ -358,7 +347,6 @@ const VideoPage = ({ onNext, studentData }: any) => {
 
   const handleVideoStart = () => {
     setVideoStartTime(Date.now());
-    setIsVideoPlaying(true);
     setPlayTime(0);
   };
 
