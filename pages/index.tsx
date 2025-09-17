@@ -340,19 +340,7 @@ const VideoPage = ({ onNext, studentData }: any) => {
 
   // 計時器
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (isTimerRunning && isActive && startTime > 0) {
-      interval = setInterval(() => {
-        const currentTime = Date.now();
-        const elapsed = Math.floor((currentTime - startTime) / 1000);
-        setPlayTime(elapsed);
-      }, 1000);
-    }
-    
-    return () => clearInterval(interval);
-  }, [isTimerRunning, isActive, startTime]);
-      // 添加全局測試函數到 window
+    // 添加全局測試函數到 window，成功後刪除以下
     window.skipToNext = () => {
       console.log('開發者模式：跳過影片觀看時間限制');
       onNext();
@@ -377,6 +365,20 @@ const VideoPage = ({ onNext, studentData }: any) => {
       delete window.addWatchTime;
     };
   }, [onNext, setPlayTime]);
+   // 全局測試函數到 window，成功後刪除以上
+    let interval: NodeJS.Timeout;
+    
+    if (isTimerRunning && isActive && startTime > 0) {
+      interval = setInterval(() => {
+        const currentTime = Date.now();
+        const elapsed = Math.floor((currentTime - startTime) / 1000);
+        setPlayTime(elapsed);
+      }, 1000);
+    }
+    
+    return () => clearInterval(interval);
+  }, [isTimerRunning, isActive, startTime]);
+
   // 點擊影片區域的處理函數
   const handleVideoClick = () => {
     if (!isTimerRunning) {
