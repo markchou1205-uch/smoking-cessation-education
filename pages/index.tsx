@@ -351,7 +351,6 @@ const VideoPage = ({ onNext, studentData }: any) => {
   };
 
   const handleVideoEnd = () => {
-    setIsVideoPlaying(false);
     // 記錄觀看時間
     const newVideoTimes = [...videoTimes];
     newVideoTimes[currentVideo] = playTime;
@@ -401,7 +400,6 @@ const VideoPage = ({ onNext, studentData }: any) => {
                     if (event.data === window.YT.PlayerState.PLAYING) {
                       handleVideoStart();
                     } else if (event.data === window.YT.PlayerState.PAUSED) {
-                      setIsVideoPlaying(false);
                     }
                   }
                 }
