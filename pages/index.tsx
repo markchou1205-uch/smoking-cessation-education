@@ -421,7 +421,7 @@ const VideoPage = ({ onNext, studentData }: any) => {
         </div>
       </div>
 
-      {/* 控制按鈕 */}
+      //{/* 控制按鈕 */}
       <div className="flex justify-center space-x-4 mb-4">
         <button
           onClick={handlePlay}
