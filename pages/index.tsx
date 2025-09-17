@@ -321,7 +321,10 @@ const VideoPage = ({ onNext, studentData }: any) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoTimes, setVideoTimes] = useState([0, 0, 0, 0]);
   const [showNext, setShowNext] = useState(false);
-  
+  const getVideoId = (url: string) => {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+  return match ? match[1] : '';
+};
   const { isActive, violations, violationLogs } = useAntiCheatMonitor();
 
   const videos = [
@@ -407,17 +410,17 @@ const VideoPage = ({ onNext, studentData }: any) => {
       <h2 className="text-xl font-semibold mb-6 flex items-center">
         <Clock className="mr-2" /> 收視戒菸宣導影片
       </h2>
-      <div className="bg-black rounded-lg mb-4" style={{ height: '400px' }}>
-        <div className="flex items-center justify-center h-full text-white">
-          <div className="text-center">
-            <h3 className="text-xl mb-4">{videos[currentVideo].title}</h3>
-            <p className="mb-4">影片連結: {videos[currentVideo].url}</p>
-            <div className="text-6xl mb-4">
-              {isPlaying ? '▶️' : '⏸️'}
-            </div>
-          </div>
-        </div>
-      </div>
+<div className="bg-black rounded-lg mb-4" style={{ height: '400px' }}>
+  <iframe
+    width="100%"
+    height="400"
+    src={`https://www.youtube.com/embed/${getVideoId(videos[currentVideo].url)}`}
+    title={videos[currentVideo].title}
+    frameBorder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowFullScreen
+  ></iframe>
+</div>
 
       //{/* 控制按鈕 */}
       <div className="flex justify-center space-x-4 mb-4">
