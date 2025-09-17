@@ -329,89 +329,61 @@ const PersonalInfoPage = ({ onNext, studentData, setStudentData }: any) => {
 const VideoPage = ({ onNext, studentData }: any) => {
   const [currentVideo, setCurrentVideo] = useState(0);
   const [playTime, setPlayTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [videoStartTime, setVideoStartTime] = useState(0);
   const [videoTimes, setVideoTimes] = useState([0, 0, 0, 0]);
-  const [showNext, setShowNext] = useState(false);
-  const getVideoId = (url: string) => {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-  return match ? match[1] : '';
-};
-  const { isActive, violations, violationLogs } = useAntiCheatMonitor();
+  
+  const { isActive, violations, violationLogs, setIsVideoPlaying } = useAntiCheatMonitor();
 
   const videos = [
-    { url: 'https://www.youtube.com/watch?v=z6AR_Rz3PWc', title: '第一部：戒菸的重要性' },
-    { url: 'https://www.youtube.com/watch?v=_20zkK8YCps', title: '第二部：菸害對健康的影響' },
-    { url: 'https://www.youtube.com/watch?v=iNiGNkuVBOI', title: '第三部：戒菸方法與資源' },
-    { url: 'https://www.youtube.com/watch?v=QRKgpii2rDg', title: '第四部：成功戒菸案例' }
+    { id: 'z6AR_Rz3PWc', title: '第一部：戒菸的重要性' },
+    { id: '_20zkK8YCps', title: '第二部：菸害對健康的影響' },
+    { id: 'iNiGNkuVBOI', title: '第三部：戒菸方法與資源' },
+    { id: 'QRKgpii2rDg', title: '第四部：成功戒菸案例' }
   ];
 
-  // 計時器
+  // 計時器 - 簡化邏輯
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isPlaying && isActive) {
+    if (videoStartTime > 0 && isActive) {
       interval = setInterval(() => {
-        setPlayTime(prev => prev + 1);
+        const currentTime = Date.now();
+        const elapsed = Math.floor((currentTime - videoStartTime) / 1000);
+        setPlayTime(elapsed);
       }, 1000);
     }
     
     return () => clearInterval(interval);
-  }, [isPlaying, isActive]);
+  }, [videoStartTime, isActive]);
 
-  // 當頁面失去焦點時暫停
-  useEffect(() => {
-    if (!isActive && isPlaying) {
-      setIsPlaying(false);
-      if (violations <= 5) {
-        alert('請保持視窗在前景並維持適當大小以繼續計時');
-      }
-    }
-  }, [isActive, violations]);
-
-  const handlePlay = () => {
-    setIsPlaying(true);
-    setShowNext(false);
+  const handleVideoStart = () => {
+    setVideoStartTime(Date.now());
+    setIsVideoPlaying(true);
+    setPlayTime(0);
   };
 
-  const handleStop = () => {
-    setIsPlaying(false);
-  };
-
-  const handleNextVideo = () => {
-    // 記錄當前影片觀看時間
+  const handleVideoEnd = () => {
+    setIsVideoPlaying(false);
+    // 記錄觀看時間
     const newVideoTimes = [...videoTimes];
     newVideoTimes[currentVideo] = playTime;
     setVideoTimes(newVideoTimes);
-    
-    setPlayTime(0);
-    setIsPlaying(false);
-    setShowNext(false);
+  };
+
+  const handleNextVideo = () => {
+    handleVideoEnd();
+    setVideoStartTime(0);
     
     if (currentVideo < 3) {
       setCurrentVideo(prev => prev + 1);
     } else {
-      // 所有影片播放完畢
-      const totalTime = newVideoTimes.reduce((sum, time) => sum + time, 0);
-      if (totalTime > 600) { // 假設最少需要10分鐘
+      const totalTime = videoTimes.reduce((sum, time) => sum + time, 0) + playTime;
+      if (totalTime > 300) { // 最少5分鐘
         onNext();
       } else {
         alert('請確實觀看所有影片，總觀看時間不足。');
       }
     }
-  };
-
-  // 模擬影片播放完成
-  useEffect(() => {
-    if (playTime > 120) { // 假設每部影片2分鐘
-      setIsPlaying(false);
-      setShowNext(true);
-    }
-  }, [playTime]);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}分${secs}秒`;
   };
 
   return (
@@ -421,50 +393,80 @@ const VideoPage = ({ onNext, studentData }: any) => {
       <h2 className="text-xl font-semibold mb-6 flex items-center">
         <Clock className="mr-2" /> 收視戒菸宣導影片
       </h2>
-<div className="bg-black rounded-lg mb-4" style={{ height: '400px' }}>
-  <iframe
-    width="100%"
-    height="400"
-    src={`https://www.youtube.com/embed/${getVideoId(videos[currentVideo].url)}`}
-    title={videos[currentVideo].title}
-    frameBorder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  ></iframe>
-</div>
 
-      //{/* 控制按鈕 */}
-      <div className="flex justify-center space-x-4 mb-4">
+      {/* YouTube 影片嵌入 */}
+      <div className="mb-4">
+        <iframe
+          width="100%"
+          height="400"
+          src={`https://www.youtube.com/embed/${videos[currentVideo].id}?enablejsapi=1&origin=${window.location.origin}`}
+          title={videos[currentVideo].title}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          onLoad={() => {
+            // YouTube Player API 初始化
+            if (window.YT) {
+              new window.YT.Player('youtube-player', {
+                events: {
+                  'onStateChange': (event) => {
+                    if (event.data === window.YT.PlayerState.PLAYING) {
+                      handleVideoStart();
+                    } else if (event.data === window.YT.PlayerState.PAUSED) {
+                      setIsVideoPlaying(false);
+                    }
+                  }
+                }
+              });
+            }
+          }}
+        ></iframe>
+      </div>
+
+      {/* 簡化的控制介面 */}
+      <div className="text-center mb-4">
+        <div className="bg-blue-50 p-4 rounded-lg mb-4">
+          <h3 className="font-semibold mb-2">{videos[currentVideo].title}</h3>
+          <p className="text-sm text-gray-600">請直接使用影片播放器的控制按鈕</p>
+        </div>
+        
         <button
-          onClick={handlePlay}
-          disabled={!isActive || violations > 5}
-          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+          onClick={handleVideoStart}
+          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 mr-4"
         >
-          播放
+          開始計時
         </button>
         
-        {showNext && (
-          <button
-            onClick={handleNextVideo}
-            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-          >
-{currentVideo < 3 ? '下一部' : '完成觀看'}
-          </button>
-        )}
-        
         <button
-          onClick={handleStop}
-          className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700"
+          onClick={handleNextVideo}
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
         >
-          停止
+          {currentVideo < 3 ? '下一部影片' : '完成觀看'}
         </button>
       </div>
 
-      {/* 計時器和其他內容 */}
+      {/* 時間顯示 */}
       <div className="text-center mb-4">
         <div className="text-lg font-medium">
-          當前影片觀看時間: {formatTime(playTime)}
+          觀看時間: {Math.floor(playTime / 60)}分{playTime % 60}秒
         </div>
+        {!isActive && (
+          <div className="text-red-600 font-medium mt-2">
+            ⚠️ 計時已暫停 - 請專心觀看
+          </div>
+        )}
+      </div>
+
+      {/* 觀看記錄 */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h4 className="font-medium mb-2">影片觀看記錄：</h4>
+        {videoTimes.map((time, index) => (
+          time > 0 && (
+            <div key={index}>
+              第{index + 1}部影片收視 {Math.floor(time / 60)}分{time % 60}秒
+            </div>
+          )
+        ))}
       </div>
     </div>
   );
