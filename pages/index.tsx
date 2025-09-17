@@ -363,8 +363,7 @@ const VideoPage = ({ onNext, studentData }: any) => {
       delete window.skipToNext;
       delete window.setWatchTime;
       delete window.addWatchTime;
-    };
-  }, [onNext, setPlayTime]);
+    }, [onNext, setPlayTime]);
    // 全局測試函數到 window，成功後刪除以上
     let interval: NodeJS.Timeout;
     
