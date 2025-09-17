@@ -6,13 +6,24 @@ const useAntiCheatMonitor = () => {
   const [isActive, setIsActive] = useState(true);
   const [violations, setViolations] = useState(0);
   const [violationLogs, setViolationLogs] = useState<string[]>([]);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   useEffect(() => {
     const handleFocus = () => setIsActive(true);
     
     const handleBlur = () => {
-      setIsActive(false);
-      addViolation('視窗失去焦點');
+      // 如果正在播放影片，給予3秒寬限時間
+      if (isVideoPlaying) {
+        setTimeout(() => {
+          if (document.hidden) {
+            setIsActive(false);
+            addViolation('頁面被隱藏或最小化');
+          }
+        }, 3000);
+      } else {
+        setIsActive(false);
+        addViolation('視窗失去焦點');
+      }
     };
 
     const handleVisibilityChange = () => {
