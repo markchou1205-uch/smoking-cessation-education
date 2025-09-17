@@ -26,3 +26,17 @@ echo "部署到 Vercel..."
 vercel --prod
 
 echo "部署完成！" 
+# package.json scripts 更新
+/*
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:init": "node scripts/init-db.js",
+    "db:seed": "node scripts/seed-db.js",
+    "deploy": "bash deploy.sh"
+  }
+}
+*/
