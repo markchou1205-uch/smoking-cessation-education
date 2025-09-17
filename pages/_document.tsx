@@ -26,7 +26,7 @@ export default function Document() {
       <body className="antialiased">
         <Main />
         <NextScript />
-        
+        <script src="https://www.youtube.com/iframe_api"></script>
         {/* 載入統計腳本 */}
         <script
           dangerouslySetInnerHTML={{
