@@ -391,21 +391,6 @@ const VideoPage = ({ onNext, studentData }: any) => {
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
-          onLoad={() => {
-            // YouTube Player API 初始化
-            if (window.YT) {
-              new window.YT.Player('youtube-player', {
-                events: {
-                  'onStateChange': (event) => {
-                    if (event.data === window.YT.PlayerState.PLAYING) {
-                      handleVideoStart();
-                    } else if (event.data === window.YT.PlayerState.PAUSED) {
-                    }
-                  }
-                }
-              });
-            }
-          }}
         ></iframe>
       </div>
 
