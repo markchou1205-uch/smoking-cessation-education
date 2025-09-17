@@ -3,6 +3,40 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, 
 import { Users, FileText, Video, CheckCircle, AlertTriangle, Download, Search, Filter } from 'lucide-react';
 
 // 模擬數據
+const mockStudentRecords = [
+  {
+    id: 1,
+    name: '王小明',
+    class: '資工四甲',
+    studentId: '1234567',
+    instructor: '李教官',
+    executionDate: '2024-03-15',
+    surveyCompleted: true,
+    videosCompleted: true,
+    quizCompleted: true,
+    essayCompleted: true,
+    eventSelected: '114年9月24日',
+    totalVideoTime: '12分30秒',
+    violations: 2,
+    focusPercentage: 85
+  },
+  {
+    id: 2,
+    name: '陳美華',
+    class: '企管三乙',
+    studentId: '2345678',
+    instructor: '張教官',
+    executionDate: '2024-03-16',
+    surveyCompleted: true,
+    videosCompleted: true,
+    quizCompleted: true,
+    essayCompleted: true,
+    eventSelected: '114年11月19日',
+    totalVideoTime: '15分45秒',
+    violations: 0,
+    focusPercentage: 98
+  }
+];
 const mockSurveyStats = {
   startSmoking: [
     { name: '大學以後', value: 45, percentage: 45 },
