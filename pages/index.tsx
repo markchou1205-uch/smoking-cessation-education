@@ -456,4 +456,48 @@ const VideoPage = ({ onNext, studentData }: any) => {
   );
 };
 
+// 主應用程式
+const SmokingCessationApp = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [studentData, setStudentData] = useState({});
+  const [selectedDate, setSelectedDate] = useState('');
+
+  const nextPage = (data?: any) => {
+    if (data) {
+      setSelectedDate(data);
+    }
+    setCurrentPage(prev => prev + 1);
+  };
+
+  const totalPages = 6;
+
+  return (
+    <div className="min-h-screen bg-gray-100 py-8">
+      <div className="max-w-4xl mx-auto">
+        <ProgressIndicator currentStep={currentPage} totalSteps={totalPages} />
+        
+        {currentPage === 1 && (
+          <PersonalInfoPage 
+            onNext={nextPage} 
+            studentData={studentData} 
+            setStudentData={setStudentData} 
+          />
+        )}
+        
+        {currentPage === 2 && (
+          <VideoPage onNext={nextPage} studentData={studentData} />
+        )}
+        
+        {/* 其他頁面可以稍後添加 */}
+        {currentPage > 2 && (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">功能開發中</h2>
+            <p>其他功能將陸續開放</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export default SmokingCessationApp;
