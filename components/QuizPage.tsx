@@ -298,7 +298,7 @@ const RetakeVideoPage: React.FC<{
       </div>
     </div>
   );
-
+/*
       {/* 重新作答按鈕 */}
       <div className="text-center">
         <button
@@ -334,7 +334,7 @@ const RetakeVideoPage: React.FC<{
     </div>
   );
 };
-
+*/
 // 主測驗頁面組件
 const QuizPage: React.FC<QuizPageProps> = ({ 
   onNext, 
