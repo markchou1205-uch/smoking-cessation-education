@@ -124,6 +124,31 @@ const RetakeVideoPage: React.FC<{
   const [isWatching, setIsWatching] = useState(false);
   const [canRetry, setCanRetry] = useState(false);
 
+  // 開發者模式快速跳過（測試用）
+  useEffect(() => {
+    window.skipRetakeVideo = () => {
+      console.log('開發者模式：跳過重看影片時間限制');
+      setWatchTime(requiredWatchTime);
+      setCanRetry(true);
+      setIsWatching(false);
+    };
+    
+    window.setRetakeWatchTime = (minutes: number) => {
+      const seconds = minutes * 60;
+      setWatchTime(Math.min(seconds, requiredWatchTime));
+      console.log(`開發者模式：設定重看影片時間為 ${minutes} 分鐘`);
+      if (seconds >= requiredWatchTime) {
+        setCanRetry(true);
+        setIsWatching(false);
+      }
+    };
+    
+    return () => {
+      delete window.skipRetakeVideo;
+      delete window.setRetakeWatchTime;
+    };
+  }, [requiredWatchTime]);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
@@ -231,7 +256,49 @@ const RetakeVideoPage: React.FC<{
             ⏱️ 正在計時觀看中...
           </div>
         )}
+
+        {/* 開發者測試按鈕 */}
+        {process.env.NODE_ENV === 'development' && !canRetry && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+            <p className="font-medium text-gray-700 mb-2">開發者測試模式：</p>
+            <div className="space-x-2">
+              <button
+                onClick={() => window.skipRetakeVideo?.()}
+                className="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600"
+              >
+                跳過重看時間
+              </button>
+              <button
+                onClick={() => window.setRetakeWatchTime?.(2)}
+                className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
+              >
+                設定已觀看2分鐘
+              </button>
+            </div>
+            <p className="text-gray-500 mt-1">
+              控制台指令：window.skipRetakeVideo() 或 window.setRetakeWatchTime(分鐘)
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* 重新作答按鈕 */}
+      <div className="text-center">
+        <button
+          onClick={onRetryQuiz}
+          disabled={!canRetry}
+          className={`px-8 py-3 rounded-lg font-medium ${
+            canRetry
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {canRetry ? '重新作答錯題' : `請先觀看影片 ${formatTime(requiredWatchTime - watchTime)}`}
+        </button>
+      </div>
+    </div>
+  );
+};
 
       {/* 重新作答按鈕 */}
       <div className="text-center">
