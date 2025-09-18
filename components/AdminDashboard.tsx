@@ -1,7 +1,34 @@
 // components/AdminDashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
-import { Users, FileText, Video, CheckCircle, AlertTriangle, Download, Search, Filter, Calendar, BookOpen, RefreshCw } from 'lucide-react';
+import { 
+  BarChart as RechartsBarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  LineChart, 
+  Line, 
+  ResponsiveContainer 
+} from 'recharts';
+import { 
+  Users, 
+  FileText, 
+  Video, 
+  CheckCircle, 
+  AlertTriangle, 
+  Download, 
+  Search, 
+  Filter, 
+  Calendar, 
+  BookOpen, 
+  RefreshCw,
+  BarChart3
+} from 'lucide-react';
 
 interface AdminDashboardProps {
   // 可以接收外部數據或配置
@@ -212,7 +239,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <BarChart className="inline-block w-4 h-4 mr-2" />
+                <BarChart3 className="inline-block w-4 h-4 mr-2" />
                 統計分析
               </button>
             </nav>
@@ -431,13 +458,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                   <div className="bg-white p-6 rounded-lg border lg:col-span-2">
                     <h3 className="text-lg font-semibold mb-4">輔導教官分佈</h3>
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={statistics.instructorStats}>
+                      <RechartsBarChart data={statistics.instructorStats}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                         <YAxis />
                         <Tooltip />
                         <Bar dataKey="value" fill="#ff7c7c" />
-                      </BarChart>
+                      </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
                 )}
@@ -882,13 +909,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                 <div className="bg-white p-6 rounded-lg border">
                   <h3 className="text-lg font-semibold mb-4">開始吸菸年齡分布</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={statistics.startSmokingStats}>
+                    <RechartsBarChart data={statistics.startSmokingStats}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
                       <Bar dataKey="value" fill="#8884d8" />
-                    </BarChart>
+                    </RechartsBarChart>
                   </ResponsiveContainer>
                 </div>
 
