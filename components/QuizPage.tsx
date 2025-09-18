@@ -298,6 +298,23 @@ const RetakeVideoPage: React.FC<{
       </div>
     </div>
   );
+
+      {/* 重新作答按鈕 */}
+      <div className="text-center">
+        <button
+          onClick={onRetryQuiz}
+          disabled={!canRetry}
+          className={`px-8 py-3 rounded-lg font-medium ${
+            canRetry
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+        >
+          {canRetry ? '重新作答錯題' : `請先觀看影片 ${formatTime(requiredWatchTime - watchTime)}`}
+        </button>
+      </div>
+    </div>
+  );
 };
 
       {/* 重新作答按鈕 */}
