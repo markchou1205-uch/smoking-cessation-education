@@ -313,7 +313,7 @@ const RetakeVideoPage: React.FC<{
           {canRetry ? '重新作答錯題' : `請先觀看影片 ${formatTime(requiredWatchTime - watchTime)}`}
         </button>
       </div>
-    </div>
+    //</div>
   );
 };
 
