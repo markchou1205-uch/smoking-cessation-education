@@ -15,24 +15,7 @@ const useAntiCheatMonitor = () => {
   const [violationLogs, setViolationLogs] = useState<string[]>([]);
 
   useEffect(() => {
-        // 添加全局測試函數到 window，測試後刪除
-    window.skipToNext = () => {
-      console.log('開發者模式：跳過影片觀看時間限制');
-      onNext();
-    };
-    
-    window.setWatchTime = (minutes: number) => {
-      const seconds = minutes * 60;
-      setPlayTime(seconds);
-      console.log(`開發者模式：設定觀看時間為 ${minutes} 分鐘`);
-    };
-    
-    window.addWatchTime = (minutes: number) => {
-      const addSeconds = minutes * 60;
-      setPlayTime(prev => prev + addSeconds);
-      console.log(`開發者模式：增加觀看時間 ${minutes} 分鐘`);
-    };
-    // 添加全局測試函數到 window，測試後刪除
+
     const handleFocus = () => setIsActive(true);
     
     const handleBlur = () => {
@@ -69,14 +52,8 @@ const useAntiCheatMonitor = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('resize', handleResize);
     };
-        // 清理函數，測試後刪除
-    return () => {
-      delete window.skipToNext;
-      delete window.setWatchTime;
-      delete window.addWatchTime;
-    };
-     // 清理函數，測試後刪除
-  }, [onNext, setPlayTime]);
+
+  }, []);
 
   const addViolation = (reason: string) => {
     setViolations(prev => prev + 1);
@@ -355,14 +332,38 @@ const VideoPage = ({ onNext, studentData }: any) => {
   const [videoTimes, setVideoTimes] = useState([0, 0, 0, 0]);
   
   const { isActive, violations, violationLogs } = useAntiCheatMonitor();
-
   const videos = [
     { id: 'z6AR_Rz3PWc', title: '第一部：戒菸的重要性' },
     { id: '_20zkK8YCps', title: '第二部：菸害對健康的影響' },
     { id: 'iNiGNkuVBOI', title: '第三部：戒菸方法與資源' },
     { id: 'QRKgpii2rDg', title: '第四部：成功戒菸案例' }
   ];
-
+  //以下測試後刪除
+  useEffect(() => {
+  window.skipToNext = () => {
+    console.log('開發者模式：跳過影片觀看時間限制');
+    onNext();
+  };
+  
+  window.setWatchTime = (minutes: number) => {
+    const seconds = minutes * 60;
+    setPlayTime(seconds);
+    console.log(`開發者模式：設定觀看時間為 ${minutes} 分鐘`);
+  };
+  
+  window.addWatchTime = (minutes: number) => {
+    const addSeconds = minutes * 60;
+    setPlayTime(prev => prev + addSeconds);
+    console.log(`開發者模式：增加觀看時間 ${minutes} 分鐘`);
+  };
+  
+  return () => {
+    delete window.skipToNext;
+    delete window.setWatchTime;
+    delete window.addWatchTime;
+  };
+}, [onNext, setPlayTime]);
+  //以上測試後刪除
   // 計時器
   useEffect(() => {
     let interval: NodeJS.Timeout;
