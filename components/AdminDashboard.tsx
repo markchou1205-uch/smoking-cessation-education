@@ -3,17 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart as RechartsBarChart, 
   Bar as RechartsBar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  LineChart, 
-  Line, 
-  ResponsiveContainer 
+  XAxis as RechartsXAxis, 
+  YAxis as RechartsYAxis, 
+  CartesianGrid as RechartsCartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  Legend as RechartsLegend, 
+  PieChart as RechartsPieChart, 
+  Pie as RechartsPie, 
+  Cell as RechartsCell, 
+  LineChart as RechartsLineChart, 
+  Line as RechartsLine, 
+  ResponsiveContainer as RechartsResponsiveContainer 
 } from 'recharts';
 import { 
   Users, 
