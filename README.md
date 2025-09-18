@@ -1,172 +1,205 @@
-/*
 # 健行科技大學戒菸教育系統
 
-## 功能特色
-- 完整的戒菸教育流程
-- 防作弊監控機制
-- 即時進度追蹤
-- 統計分析後台
-- PDF 記錄生成
+> 一個完整的戒菸教育執行系統，提供學生端教育流程與管理員後台統計功能
 
-## 技術架構
-- Frontend: Next.js + React + TypeScript
-- Backend: Next.js API Routes
-- Database: PostgreSQL (Vercel Postgres)
-- Styling: Tailwind CSS
-- Charts: Recharts
-- PDF: jsPDF
+## 📋 專案簡介
 
-## 安裝步驟
+本系統為健行科技大學開發的戒菸教育執行平台，針對違規吸菸學生提供完整的教育流程，包含：
 
-1. 克隆專案
-git clone [repo-url]
+- 個人資料填寫與吸菸狀況調查
+- 戒菸宣導影片觀看
+- 戒菸常識測驗
+- 心得寫作指導
+- 宣導活動場次選擇
+- 完成證明PDF生成
+- 後台管理與統計分析
+
+## 🚀 功能特色
+
+### 學生端功能
+- ✅ **完整教育流程**：6個步驟的戒菸教育
+- ✅ **智慧測驗系統**：答錯重看相關影片
+- ✅ **進度追蹤**：清楚的步驟指示
+- ✅ **響應式設計**：支援各種裝置
+- ✅ **PDF生成**：自動產生完成證明
+
+### 管理端功能
+- ✅ **學生記錄管理**：完整的參與記錄
+- ✅ **統計圖表**：多維度數據分析
+- ✅ **篩選搜尋**：彈性的資料查詢
+- ✅ **資料匯出**：CSV格式匯出
+- ✅ **即時統計**：關鍵指標儀表板
+
+## 🛠️ 技術架構
+
+- **前端框架**：Next.js 14 + TypeScript
+- **樣式系統**：Tailwind CSS
+- **圖表庫**：Recharts
+- **圖示庫**：Lucide React
+- **PDF生成**：jsPDF
+- **部署平台**：Vercel
+
+## 📦 安裝說明
+
+### 1. 克隆專案
+
+```bash
+git clone https://github.com/your-repo/smoking-cessation-education.git
 cd smoking-cessation-education
+```
 
-2. 安裝依賴
+### 2. 安裝依賴
+
+```bash
 npm install
+```
 
-3. 設定環境變數
-cp .env.example .env.local
-# 編輯 .env.local 填入資料庫連線資訊
+或使用 yarn：
 
-4. 初始化資料庫
-npm run db:init
+```bash
+yarn install
+```
 
-5. 啟動開發伺服器
+### 3. 環境設定
+
+```bash
+# 複製環境變數範例檔案
+cp .env.local.example .env.local
+
+# 編輯環境變數
+nano .env.local
+```
+
+### 4. 啟動開發伺服器
+
+```bash
 npm run dev
+```
 
-## 部署到 Vercel
+開啟瀏覽器訪問 [http://localhost:3000](http://localhost:3000)
 
-1. 連接 GitHub 儲存庫到 Vercel
-2. 設定環境變數
-3. 部署完成後執行資料庫初始化
-
-## 系統架構
+## 🏗️ 專案結構
 
 ```
-├── pages/
-│   ├── api/               # API 路由
-│   │   ├── students/      # 學生資料管理
-│   │   ├── survey/        # 吸菸調查
-│   │   ├── videos/        # 影片進度
-│   │   ├── quiz/          # 測驗系統
-│   │   ├── admin/         # 後台管理
-│   │   └── export/        # 資料匯出
-│   ├── admin/             # 後台管理頁面
-│   └── index.tsx          # 主要應用程式
-├── components/            # React 組件
+smoking-cessation-education/
+├── pages/                  # Next.js 頁面
+│   ├── index.tsx          # 主應用程式
+│   ├── _app.tsx           # 應用程式入口
+│   └── api/               # API 路由
+├── components/             # React 組件
+│   ├── PersonalInfoPage.tsx
+│   ├── VideoPage.tsx
+│   ├── QuizPage.tsx
+│   ├── EssayPage.tsx
+│   ├── EventSelectionPage.tsx
+│   ├── CompletionPage.tsx
+│   ├── AdminDashboard.tsx
+│   └── ProgressIndicator.tsx
+├── styles/                # 樣式檔案
+│   └── globals.css
+├── public/                # 靜態資源
 ├── lib/                   # 工具函數
-├── styles/                # 樣式文件
-└── public/                # 靜態資源
+└── utils/                 # 輔助工具
 ```
 
-## 防作弊機制
+## 🎯 使用流程
 
-1. **視窗監控**
-   - 檢測視窗焦點狀態
-   - 監控視窗大小變化
-   - 頁面可見性檢測
+### 學生端使用流程
 
-2. **時間追蹤**
-   - 只有在專心狀態下才計時
-   - 記錄違規次數和時間
-   - 專注度百分比計算
+1. **個人資料填寫**
+   - 填寫基本資料（姓名、班級、學號等）
+   - 完成11項吸菸狀況調查
 
-3. **進度保護**
-   - 防止跳過影片
-   - 測驗答案驗證
-   - 完成度檢查
+2. **觀看宣導影片**
+   - 觀看4部戒菸宣導影片
+   - 系統計時16分鐘確保觀看
 
-## 使用流程
+3. **戒菸常識測驗**
+   - 20題測驗（10題是非 + 10題選擇）
+   - 答錯需重看相關影片並重新作答
 
-### 學生端
-1. 填寫個人資料和吸菸調查
-2. 觀看四部戒菸宣導影片
-3. 完成 20 題戒菸常識測驗
-4. 撰寫 500 字心得報告
-5. 選擇宣導活動場次
-6. 列印完成記錄表
+4. **心得寫作**
+   - 撰寫500字戒菸教育心得
+   - 提供寫作指導與範例
 
-### 管理端
-1. 查看學生執行記錄
-2. 統計分析吸菸調查結果
-3. 匯出 Excel 報表
-4. 監控系統使用狀況
+5. **選擇宣導場次**
+   - 選擇參加的戒菸宣導活動
+   - 確認參與義務與法律責任
 
-## API 端點
+6. **完成證明**
+   - 自動生成PDF完成證明
+   - 列印交給輔導教官
 
-- `POST /api/students` - 建立學生記錄
-- `POST /api/survey` - 提交吸菸調查
-- `POST /api/videos/progress` - 更新影片進度
-- `POST /api/quiz/submit` - 提交測驗答案
-- `POST /api/event/select` - 選擇宣導場次
-- `GET /api/admin/statistics` - 獲取統計資料
-- `GET /api/admin/export` - 匯出資料
+### 管理員使用流程
 
-## 資料庫結構
+1. **登入後台系統**
+2. **查看統計儀表板**
+3. **管理學生記錄**
+4. **分析統計數據**
+5. **匯出報表資料**
 
-主要資料表：
-- `students_info` - 學生基本資料
-- `smoking_survey` - 吸菸調查結果
-- `video_records` - 影片觀看記錄
-- `quiz_results` - 測驗結果
-- `completion_records` - 完成度追蹤
-- `event_selection` - 場次選擇
+## 🔧 開發說明
 
-## 安全性
+### 開發者模式功能
 
-1. **輸入驗證** - 所有使用者輸入都經過驗證
-2. **SQL 注入防護** - 使用參數化查詢
-3. **CSRF 防護** - 實作 CSRF token
-4. **存取控制** - 管理員路由保護
-5. **資料加密** - 敏感資料加密存儲
+在開發環境中，系統提供以下快速測試功能：
 
-## 效能優化
+```javascript
+// 瀏覽器控制台可用的快速指令
+window.skipToNext()           // 跳過當前步驟
+window.setWatchTime(分鐘)     // 設定影片觀看時間
+```
 
-1. **圖片優化** - Next.js 自動圖片優化
-2. **程式碼分割** - 動態載入非關鍵組件
-3. **快取策略** - API 回應快取
-4. **CDN 加速** - 靜態資源 CDN 分發
+### 建置部署
 
-## 監控與維護
+```bash
+# 建置生產版本
+npm run build
 
-1. **錯誤追蹤** - 整合錯誤監控服務
-2. **效能監控** - 監控 API 回應時間
-3. **使用者分析** - 追蹤使用者行為
-4. **備份策略** - 定期資料庫備份
+# 啟動生產伺服器
+npm start
 
-## 常見問題
+# 代碼檢查
+npm run lint
+```
 
-**Q: 學生可以重複進入系統嗎？**
-A: 系統會檢查學號，已完成的學生無法重複執行。
+## 📊 系統特色
 
-**Q: 影片無法播放怎麼辦？**
-A: 請確認網路連線，或聯絡技術支援。
+### 教育設計理念
+- **後果學習**：答錯重看，強化記憶
+- **主動學習**：學生主動尋找答案
+- **個人化**：針對錯誤進行補強
+- **完整性**：涵蓋完整戒菸教育流程
 
-**Q: 如何重置學生進度？**
-A: 管理員可在後台重置特定學生的進度。
+### 技術創新
+- **簡化防作弊**：用教育邏輯取代技術監控
+- **響應式設計**：支援各種裝置
+- **模組化架構**：易於維護與擴展
+- **無障礙設計**：符合網頁可及性標準
 
-**Q: 資料可以匯出嗎？**
-A: 可以，管理員可匯出 Excel 格式的完整記錄。
+## 🤝 貢獻指南
 
-## 技術支援
+1. Fork 專案
+2. 建立功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 開啟 Pull Request
 
-如有任何技術問題，請聯絡：
-- 電話：03-4581196
-- 信箱：military@uch.edu.tw
-- 地址：桃園市中壢區健行路229號
+## 📄 授權條款
 
-## 更新日誌
+本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
 
-### v1.0.0 (2024-03-15)
-- 初始版本發布
-- 完整戒菸教育流程
-- 防作弊監控機制
-- 後台管理系統
+## 📞 聯絡資訊
 
-### 未來規劃
-- 手機 App 版本
-- 多語言支援
-- 進階統計分析
-- 自動提醒功能
-*/
+- **開發團隊**：健行科技大學資訊中心
+- **專案負責人**：[您的姓名]
+- **Email**：admin@uch.edu.tw
+- **專案網址**：https://github.com/your-repo/smoking-cessation-education
+
+## 🙏 致謝
+
+感謝所有參與開發和測試的同仁，以及健行科技大學對本專案的支持。
+
+---
+
+**健行科技大學戒菸教育系統** - 為了學生的健康未來 🚭
