@@ -13,18 +13,18 @@ const EventSelectionPage: React.FC<EventSelectionPageProps> = ({ onNext, student
 
   const eventDates = [
     {
-      id: '2024-09-24',
+      id: '2025-09-24',
       date: '114年9月24日',
-      dayOfWeek: '(星期二)',
+      dayOfWeek: '(星期三)',
       time: '下午2:00-4:00',
-      location: '學生活動中心大禮堂'
+      location: '電資學院一樓視聽教室'
     },
     {
-      id: '2024-11-19',
+      id: '2025-11-19',
       date: '114年11月19日',
-      dayOfWeek: '(星期二)',
+      dayOfWeek: '(星期三)',
       time: '下午2:00-4:00',
-      location: '學生活動中心大禮堂'
+      location: '電資學院一樓視聽教室'
     }
   ];
 
