@@ -313,8 +313,9 @@ const QuizPage: React.FC<QuizPageProps> = ({
 
   // 取得需要重看的影片
   const getVideosToRewatch = (wrongAnswers: any[]) => {
-    const videoNumbers = [...new Set(wrongAnswers.map((wa: any) => wa.videoSource))];
-    return videoNumbers.map(num => videoInfo[num]);
+    const videoSources = wrongAnswers.map((wa: any) => wa.videoSource);
+    const uniqueVideoNumbers = videoSources.filter((value, index, self) => self.indexOf(value) === index);
+    return uniqueVideoNumbers.map(num => videoInfo[num]);
   };
 
   if (showResults && !quizResults.allCorrect) {
@@ -438,4 +439,4 @@ const QuizPage: React.FC<QuizPageProps> = ({
   );
 };
 
-export default QuizPage; 
+export default QuizPage;
