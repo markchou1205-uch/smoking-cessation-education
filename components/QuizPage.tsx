@@ -59,14 +59,14 @@ const quizQuestions = [
     type: 'choice', 
     question: '菸害防制法規定幾歲以下禁止吸菸？', 
     options: ['16歲', '18歲', '20歲', '21歲'], 
-    answer: 1 
+    answer: 2 
   },
   { 
     id: 15, 
     type: 'choice', 
     question: '二手菸中含有多少種致癌物質？', 
     options: ['50種以上', '70種以上', '90種以上', '100種以上'], 
-    answer: 1 
+    answer: 2 
   },
   { 
     id: 16, 
