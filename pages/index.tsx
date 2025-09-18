@@ -15,6 +15,24 @@ const useAntiCheatMonitor = () => {
   const [violationLogs, setViolationLogs] = useState<string[]>([]);
 
   useEffect(() => {
+        // 添加全局測試函數到 window，測試後刪除
+    window.skipToNext = () => {
+      console.log('開發者模式：跳過影片觀看時間限制');
+      onNext();
+    };
+    
+    window.setWatchTime = (minutes: number) => {
+      const seconds = minutes * 60;
+      setPlayTime(seconds);
+      console.log(`開發者模式：設定觀看時間為 ${minutes} 分鐘`);
+    };
+    
+    window.addWatchTime = (minutes: number) => {
+      const addSeconds = minutes * 60;
+      setPlayTime(prev => prev + addSeconds);
+      console.log(`開發者模式：增加觀看時間 ${minutes} 分鐘`);
+    };
+    // 添加全局測試函數到 window，測試後刪除
     const handleFocus = () => setIsActive(true);
     
     const handleBlur = () => {
@@ -51,7 +69,14 @@ const useAntiCheatMonitor = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('resize', handleResize);
     };
-  }, []);
+        // 清理函數，測試後刪除
+    return () => {
+      delete window.skipToNext;
+      delete window.setWatchTime;
+      delete window.addWatchTime;
+    };
+     // 清理函數，測試後刪除
+  }, [onNext, setPlayTime]);
 
   const addViolation = (reason: string) => {
     setViolations(prev => prev + 1);
