@@ -151,7 +151,7 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
           </div>
           <div className="text-center">
             <div className="w-20 h-20 border-2 border-gray-400 rounded-full flex items-center justify-center">
-              <span className="text-xs text-gray-500">校章</span>
+              <span className="text-xs text-gray-500">春暉承辦人蓋章</span>
             </div>
           </div>
         </div>
@@ -216,7 +216,7 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
 
       {/* 感謝訊息 */}
       <div className="text-center mt-8 text-gray-600">
-        <p>感謝您完成健行科技大學戒菸教育課程</p>
+        <p>恭喜您完成健行科技大學戒菸教育課程</p>
         <p className="text-sm mt-2">祝您健康快樂，遠離菸害！</p>
       </div>
     </div>
