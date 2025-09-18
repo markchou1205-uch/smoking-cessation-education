@@ -28,6 +28,71 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
     counselingInterest: ''
   });
 
+  const [errors, setErrors] = useState({
+    phone: '',
+    studentId: '',
+    instructor: ''
+  });
+
+  // 輔導教官選項
+  const instructorOptions = [
+    '郭威均教官',
+    '陳鈴玉教官',
+    '許順益教官',
+    '陳震宇教官',
+    '周增明教官',
+    '林雅月教官',
+    '鄧建鑫教官',
+    '邱信國教官',
+    '林政益教官(進)',
+    '温榮星教官(進)',
+    '王仁柏教官(進)'
+  ];
+
+  // 驗證手機號碼（10碼數字）
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(phone)) {
+      return '手機號碼必須為10碼數字';
+    }
+    return '';
+  };
+
+  // 驗證學號（第1碼英文字母，後8碼數字）
+  const validateStudentId = (studentId: string) => {
+    const studentIdRegex = /^[A-Za-z]\d{8}$/;
+    if (!studentIdRegex.test(studentId)) {
+      return '學號必須為9碼，第1碼為英文字母，後8碼為數字';
+    }
+    return '';
+  };
+
+  // 處理輸入變更
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+
+    // 即時驗證
+    if (field === 'phone') {
+      setErrors(prev => ({
+        ...prev,
+        phone: validatePhone(value)
+      }));
+    } else if (field === 'studentId') {
+      setErrors(prev => ({
+        ...prev,
+        studentId: validateStudentId(value)
+      }));
+    } else if (field === 'instructor') {
+      setErrors(prev => ({
+        ...prev,
+        instructor: value ? '' : '請選擇輔導教官'
+      }));
+    }
+  };
+
   const handleReasonChange = (reason: string) => {
     setFormData(prev => ({
       ...prev,
@@ -37,10 +102,54 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStudentData(formData);
-    onNext();
+    
+    // 驗證所有必填欄位
+    const phoneError = validatePhone(formData.phone);
+    const studentIdError = validateStudentId(formData.studentId);
+    const instructorError = !formData.instructor ? '請選擇輔導教官' : '';
+
+    setErrors({
+      phone: phoneError,
+      studentId: studentIdError,
+      instructor: instructorError
+    });
+
+    // 如果有錯誤，停止提交
+    if (phoneError || studentIdError || instructorError) {
+      alert('請修正表單錯誤後再提交');
+      return;
+    }
+
+    try {
+      // 發送資料到後台
+      const response = await fetch('/api/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          completedDate: new Date().toISOString(),
+          status: 'in_progress'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('提交失敗');
+      }
+
+      const result = await response.json();
+      console.log('資料提交成功:', result);
+
+      // 設定本地狀態並進入下一步
+      setStudentData(formData);
+      onNext();
+    } catch (error) {
+      console.error('提交錯誤:', error);
+      alert('資料提交失敗，請稍後再試');
+    }
   };
 
   return (
@@ -54,58 +163,84 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
         {/* 個人基本資料 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">姓名</label>
+            <label className="block text-sm font-medium text-gray-700">姓名 *</label>
             <input
               type="text"
               required
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => handleInputChange('name', e.target.value)}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">班級</label>
+            <label className="block text-sm font-medium text-gray-700">班級 *</label>
             <input
               type="text"
               required
+              placeholder="例：資工系二甲"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
               value={formData.class}
-              onChange={(e) => setFormData({...formData, class: e.target.value})}
+              onChange={(e) => handleInputChange('class', e.target.value)}
             />
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">學號</label>
+            <label className="block text-sm font-medium text-gray-700">學號 *</label>
             <input
               type="text"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+              placeholder="例：A123456789"
+              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${
+                errors.studentId ? 'border-red-500' : 'border-gray-300'
+              }`}
               value={formData.studentId}
-              onChange={(e) => setFormData({...formData, studentId: e.target.value})}
+              onChange={(e) => handleInputChange('studentId', e.target.value.toUpperCase())}
+              maxLength={9}
             />
+            {errors.studentId && (
+              <p className="mt-1 text-sm text-red-600">{errors.studentId}</p>
+            )}
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">手機</label>
+            <label className="block text-sm font-medium text-gray-700">手機 *</label>
             <input
               type="tel"
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+              placeholder="例：0912345678"
+              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${
+                errors.phone ? 'border-red-500' : 'border-gray-300'
+              }`}
               value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, ''))}
+              maxLength={10}
             />
+            {errors.phone && (
+              <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+            )}
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">輔導教官</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700">輔導教官 *</label>
+            <select
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${
+                errors.instructor ? 'border-red-500' : 'border-gray-300'
+              }`}
               value={formData.instructor}
-              onChange={(e) => setFormData({...formData, instructor: e.target.value})}
-            />
+              onChange={(e) => handleInputChange('instructor', e.target.value)}
+            >
+              <option value="">請選擇輔導教官</option>
+              {instructorOptions.map((instructor, index) => (
+                <option key={index} value={instructor}>
+                  {instructor}
+                </option>
+              ))}
+            </select>
+            {errors.instructor && (
+              <p className="mt-1 text-sm text-red-600">{errors.instructor}</p>
+            )}
           </div>
         </div>
 
@@ -115,7 +250,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">你從什麼時候開始吸菸？</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">你從什麼時候開始吸菸？ *</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {['大學以後', '高中階段', '國中階段', '國小階段'].map(option => (
                   <label key={option} className="flex items-center">
@@ -124,7 +259,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
                       name="startSmoking"
                       value={option}
                       required
-                      onChange={(e) => setFormData({...formData, startSmoking: e.target.value})}
+                      onChange={(e) => handleInputChange('startSmoking', e.target.value)}
                       className="mr-2"
                     />
                     {option}
@@ -134,7 +269,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">你一週吸菸的頻率？</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">你一週吸菸的頻率？ *</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {['每天抽', '1-2天抽1次', '3-4天抽1次', '1週抽1次'].map(option => (
                   <label key={option} className="flex items-center">
@@ -143,7 +278,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
                       name="frequency"
                       value={option}
                       required
-                      onChange={(e) => setFormData({...formData, frequency: e.target.value})}
+                      onChange={(e) => handleInputChange('frequency', e.target.value)}
                       className="mr-2"
                     />
                     {option}
@@ -153,7 +288,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">你一天吸菸幾支？</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">你一天吸菸幾支？ *</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {['10支以上', '5-9支', '3-4支', '1-2支'].map(option => (
                   <label key={option} className="flex items-center">
@@ -162,7 +297,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
                       name="dailyAmount"
                       value={option}
                       required
-                      onChange={(e) => setFormData({...formData, dailyAmount: e.target.value})}
+                      onChange={(e) => handleInputChange('dailyAmount', e.target.value)}
                       className="mr-2"
                     />
                     {option}
@@ -172,7 +307,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">你平常吸菸的原因是什麼？（可複選）</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">你平常吸菸的原因是什麼？（可複選）*</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {['專心', '放鬆', '習慣', '交際', '打發時間', '其它'].map(option => (
                   <label key={option} className="flex items-center">
@@ -200,7 +335,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
               { key: 'counselingInterest', question: '政府有提供免費的戒菸輔導，你有興趣瞭解嗎？', options: ['有', '沒有'] }
             ].map(item => (
               <div key={item.key}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">{item.question}</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{item.question} *</label>
                 <div className="flex space-x-4">
                   {item.options.map(option => (
                     <label key={option} className="flex items-center">
@@ -209,7 +344,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
                         name={item.key}
                         value={option}
                         required
-                        onChange={(e) => setFormData({...formData, [item.key]: e.target.value})}
+                        onChange={(e) => handleInputChange(item.key, e.target.value)}
                         className="mr-2"
                       />
                       {option}
@@ -232,4 +367,4 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
   );
 };
 
-export default PersonalInfoPage; 
+export default PersonalInfoPage;
