@@ -16,17 +16,20 @@ const AdminPage: React.FC = () => {
   // 檢查登入狀態
   useEffect(() => {
     const checkAuth = () => {
-      const adminToken = localStorage.getItem('adminToken');
-      const adminExpiry = localStorage.getItem('adminExpiry');
-      
-      if (adminToken && adminExpiry) {
-        const now = new Date().getTime();
-        if (now < parseInt(adminExpiry)) {
-          setIsAuthenticated(true);
-        } else {
-          // Token 過期，清除本地存儲
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminExpiry');
+      // 確保在客戶端執行
+      if (typeof window !== 'undefined') {
+        const adminToken = localStorage.getItem('adminToken');
+        const adminExpiry = localStorage.getItem('adminExpiry');
+        
+        if (adminToken && adminExpiry) {
+          const now = new Date().getTime();
+          if (now < parseInt(adminExpiry)) {
+            setIsAuthenticated(true);
+          } else {
+            // Token 過期，清除本地存儲
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminExpiry');
+          }
         }
       }
       setLoading(false);
@@ -54,8 +57,13 @@ const AdminPage: React.FC = () => {
       if (data.success) {
         // 設定登入狀態和過期時間（24小時後）
         const expiry = new Date().getTime() + (24 * 60 * 60 * 1000);
-        localStorage.setItem('adminToken', data.token);
-        localStorage.setItem('adminExpiry', expiry.toString());
+        
+        // 確保在客戶端執行
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('adminExpiry', expiry.toString());
+        }
+        
         setIsAuthenticated(true);
       } else {
         setLoginError(data.error || '登入失敗');
@@ -68,8 +76,11 @@ const AdminPage: React.FC = () => {
 
   // 登出處理
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminExpiry');
+    // 確保在客戶端執行
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminExpiry');
+    }
     setIsAuthenticated(false);
     setLoginForm({ username: '', password: '' });
   };
