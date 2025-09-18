@@ -11,6 +11,9 @@ import React, { useState } from 'react';
 import PersonalInfoPage from '../components/PersonalInfoPage';
 import VideoPage from '../components/VideoPage';
 import QuizPage from '../components/QuizPage';
+import EssayPage from '../components/EssayPage';
+import EventSelectionPage from '../components/EventSelectionPage';
+import CompletionPage from '../components/CompletionPage';
 import ProgressIndicator from '../components/ProgressIndicator';
 
 // 主應用程式
@@ -64,20 +67,38 @@ const SmokingCessationApp = () => {
           />
         )}
         
-        {/* 其他頁面可以稍後添加 */}
-        {currentPage > 3 && (
-          <div className="text-center bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-bold mb-4">功能開發中</h2>
-            <p className="text-gray-600">第 {currentPage} 頁功能將陸續開放</p>
-            
-            {/* 開發者快速導航 */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-6 space-x-2">
+        {currentPage === 4 && (
+          <EssayPage 
+            onNext={nextPage}
+            studentData={studentData}
+          />
+        )}
+        
+        {currentPage === 5 && (
+          <EventSelectionPage 
+            onNext={nextPage}
+            studentData={studentData}
+          />
+        )}
+        
+        {currentPage === 6 && (
+          <CompletionPage 
+            studentData={studentData}
+            selectedDate={selectedDate}
+          />
+        )}
+        
+        {/* 開發者快速導航 */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-6 text-center">
+            <div className="bg-white p-4 rounded-lg shadow-lg">
+              <h3 className="text-sm font-medium text-gray-600 mb-2">開發者導航</h3>
+              <div className="space-x-2">
                 {[1, 2, 3, 4, 5, 6].map(page => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded text-sm ${
+                    className={`px-3 py-1 rounded text-sm transition-colors ${
                       currentPage === page 
                         ? 'bg-blue-600 text-white' 
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -87,7 +108,11 @@ const SmokingCessationApp = () => {
                   </button>
                 ))}
               </div>
-            )}
+              <div className="text-xs text-gray-500 mt-2">
+                當前資料: {Object.keys(studentData).length > 0 ? '已填寫' : '未填寫'} | 
+                選擇日期: {selectedDate || '未選擇'}
+              </div>
+            </div>
           </div>
         )}
       </div>
