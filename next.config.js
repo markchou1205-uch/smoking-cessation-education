@@ -1,11 +1,14 @@
- 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  
+  // 保留原有的圖片配置，支援 YouTube 嵌入
   images: {
     domains: ['img.youtube.com'],
   },
+  
+  // 保留原有的安全標頭配置
   async headers() {
     return [
       {
@@ -27,7 +30,8 @@ const nextConfig = {
       },
     ];
   },
-  // 支援 YouTube 嵌入
+  
+  // 保留原有的 rewrites 配置，支援 YouTube 嵌入
   async rewrites() {
     return [
       {
@@ -36,6 +40,16 @@ const nextConfig = {
       },
     ];
   },
-}
+  
+  // 處理 ESLint（只在開發時忽略，生產環境仍會檢查）
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+  
+  // 處理 TypeScript 錯誤
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
