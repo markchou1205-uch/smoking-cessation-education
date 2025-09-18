@@ -1,522 +1,513 @@
+// components/AdminDashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, FileText, Video, CheckCircle, AlertTriangle, Download, Search, Filter } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line, ResponsiveContainer } from 'recharts';
+import { Users, FileText, Video, CheckCircle, AlertTriangle, Download, Search, Filter, Calendar, BookOpen } from 'lucide-react';
 
-// 模擬數據
+// 模擬數據 - 實際部署時應從 API 獲取
 const mockStudentRecords = [
   {
     id: 1,
     name: '王小明',
-    class: '資工四甲',
-    studentId: '1234567',
+    class: '資工系二甲',
+    studentId: 'CS2023001',
     instructor: '李教官',
-    executionDate: '2024-03-15',
-    surveyCompleted: true,
-    videosCompleted: true,
-    quizCompleted: true,
-    essayCompleted: true,
-    eventSelected: '114年9月24日',
-    totalVideoTime: '12分30秒',
-    violations: 2,
-    focusPercentage: 85
+    completedDate: '2024-01-15',
+    surveyData: {
+      startSmoking: '高中階段',
+      frequency: '每天抽',
+      dailyAmount: '5-9支',
+      reasons: ['放鬆', '習慣'],
+      familySmoking: '有',
+      campusAwareness: '知道',
+      signageAwareness: '有',
+      tobaccoType: '紙煙',
+      quitAttempts: '有',
+      quitIntention: '有',
+      counselingInterest: '有'
+    },
+    selectedEvent: '114年9月24日',
+    status: 'completed'
   },
   {
     id: 2,
-    name: '陳美華',
-    class: '企管三乙',
-    studentId: '2345678',
+    name: '陳小華',
+    class: '企管系一乙',
+    studentId: 'BM2024002',
     instructor: '張教官',
-    executionDate: '2024-03-16',
-    surveyCompleted: true,
-    videosCompleted: true,
-    quizCompleted: true,
-    essayCompleted: true,
-    eventSelected: '114年11月19日',
-    totalVideoTime: '15分45秒',
-    violations: 0,
-    focusPercentage: 98
+    completedDate: '2024-01-16',
+    surveyData: {
+      startSmoking: '大學以後',
+      frequency: '1-2天抽1次',
+      dailyAmount: '1-2支',
+      reasons: ['交際', '打發時間'],
+      familySmoking: '沒有',
+      campusAwareness: '知道',
+      signageAwareness: '有',
+      tobaccoType: '電子煙',
+      quitAttempts: '沒有',
+      quitIntention: '有',
+      counselingInterest: '有'
+    },
+    selectedEvent: '114年11月19日',
+    status: 'completed'
   }
 ];
-const mockSurveyStats = {
-  startSmoking: [
-    { name: '大學以後', value: 45, percentage: 45 },
-    { name: '高中階段', value: 35, percentage: 35 },
-    { name: '國中階段', value: 15, percentage: 15 },
-    { name: '國小階段', value: 5, percentage: 5 }
-  ],
-  frequency: [
-    { name: '每天抽', value: 30, percentage: 30 },
-    { name: '1-2天抽1次', value: 25, percentage: 25 },
-    { name: '3-4天抽1次', value: 25, percentage: 25 },
-    { name: '1週抽1次', value: 20, percentage: 20 }
-  ],
-  dailyAmount: [
-    { name: '1-2支', value: 40, percentage: 40 },
-    { name: '3-4支', value: 30, percentage: 30 },
-    { name: '5-9支', value: 20, percentage: 20 },
-    { name: '10支以上', value: 10, percentage: 10 }
-  ],
-  reasons: [
-    { name: '習慣', value: 35 },
-    { name: '放鬆', value: 28 },
-    { name: '交際', value: 20 },
-    { name: '專心', value: 12 },
-    { name: '打發時間', value: 15 },
-    { name: '其它', value: 8 }
-  ],
-  quitIntention: [
-    { name: '有意願', value: 65, percentage: 65 },
-    { name: '沒有意願', value: 35, percentage: 35 }
-  ]
-};
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
-
-// 統計卡片組件
-const StatCard = ({ title, value, icon: Icon, color, description }: any) => (
-  <div className="bg-white rounded-lg shadow p-6">
-    <div className="flex items-center">
-      <div className={`p-3 rounded-lg ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-      <div className="ml-4">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        {description && <p className="text-sm text-gray-600">{description}</p>}
-      </div>
-    </div>
-  </div>
-);
-
-// 學生記錄表格
-const StudentRecordsTable = ({ records, onExport }: any) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-
-  const filteredRecords = records.filter((record: any) => {
-    const matchesSearch = record.name.includes(searchTerm) || 
-                         record.studentId.includes(searchTerm) ||
-                         record.class.includes(searchTerm);
-    
-    const matchesFilter = filterStatus === 'all' || 
-                         (filterStatus === 'completed' && record.essayCompleted) ||
-                         (filterStatus === 'incomplete' && !record.essayCompleted);
-    
-    return matchesSearch && matchesFilter;
-  });
-
-  return (
-    <div className="bg-white rounded-lg shadow">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">戒菸教育執行記錄</h2>
-          <button
-            onClick={onExport}
-            className="flex items-center bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            匯出 Excel
-          </button>
-        </div>
-        
-        <div className="flex space-x-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="搜尋姓名、學號、班級..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <select
-            className="px-4 py-2 border rounded-lg"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">全部狀態</option>
-            <option value="completed">已完成</option>
-            <option value="incomplete">未完成</option>
-          </select>
-        </div>
-      </div>
-      
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">學生資訊</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">執行日期</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">影片觀看</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">測驗</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">心得</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">選擇場次</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">專注度</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">狀態</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredRecords.map((record: any) => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div>
-                    <div className="font-medium">{record.name}</div>
-                    <div className="text-sm text-gray-600">{record.class}</div>
-                    <div className="text-sm text-gray-600">{record.studentId}</div>
-                    <div className="text-sm text-gray-600">教官：{record.instructor}</div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm">{record.executionDate}</td>
-                <td className="px-6 py-4">
-                  <div className="text-sm">
-                    {record.videosCompleted ? (
-                      <span className="flex items-center text-green-600">
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        {record.totalVideoTime}
-                      </span>
-                    ) : (
-                      <span className="flex items-center text-red-600">
-                        <AlertTriangle className="w-4 h-4 mr-1" />
-                        {record.totalVideoTime}
-                      </span>
-                    )}
-                    <div className="text-xs text-gray-500">
-                      違規: {record.violations}次
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  {record.quizCompleted ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <AlertTriangle className="w-5 h-5 text-red-500" />
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  {record.essayCompleted ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <AlertTriangle className="w-5 h-5 text-red-500" />
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm">{record.eventSelected || '未選擇'}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center">
-                    <div className="w-16 h-2 bg-gray-200 rounded mr-2">
-                      <div 
-                        className={`h-2 rounded ${
-                          record.focusPercentage >= 80 ? 'bg-green-500' : 
-                          record.focusPercentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${record.focusPercentage}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-sm">{record.focusPercentage}%</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  {record.essayCompleted ? (
-                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                      已完成
-                    </span>
-                  ) : (
-                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">
-                      進行中
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      {filteredRecords.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          沒有找到符合條件的記錄
-        </div>
-      )}
-    </div>
-  );
-};
-
-// 圖表組件
-const SurveyCharts = ({ data }: any) => (
-  <div className="space-y-8">
-    {/* 開始吸菸時期 */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">開始吸菸時期分佈</h3>
-      <div className="flex flex-col lg:flex-row items-center">
-        <div className="w-full lg:w-2/3">
-          <BarChart width={500} height={300} data={data.startSmoking}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="value" fill="#8884d8" />
-          </BarChart>
-        </div>
-        <div className="w-full lg:w-1/3 mt-4 lg:mt-0">
-          <PieChart width={250} height={250}>
-            <Pie
-              data={data.startSmoking}
-              cx={125}
-              cy={125}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-              label={({ name, percentage }) => `${name}: ${percentage}%`}
-            >
-              {data.startSmoking.map((entry: any, index: number) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </div>
-      </div>
-    </div>
-
-    {/* 吸菸頻率 */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">吸菸頻率分佈</h3>
-      <BarChart width={600} height={300} data={data.frequency}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="value" fill="#82ca9d" />
-      </BarChart>
-    </div>
-
-    {/* 每日吸菸量 */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">每日吸菸量分佈</h3>
-      <div className="flex flex-col lg:flex-row items-center">
-        <div className="w-full lg:w-1/2">
-          <PieChart width={300} height={300}>
-            <Pie
-              data={data.dailyAmount}
-              cx={150}
-              cy={150}
-              outerRadius={100}
-              fill="#8884d8"
-              dataKey="value"
-              label={({ name, percentage }) => `${name}: ${percentage}%`}
-            >
-              {data.dailyAmount.map((entry: any, index: number) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </div>
-        <div className="w-full lg:w-1/2">
-          <div className="space-y-2">
-            {data.dailyAmount.map((item: any, index: number) => (
-              <div key={item.name} className="flex items-center">
-                <div 
-                  className="w-4 h-4 rounded mr-2"
-                  style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                ></div>
-                <span className="text-sm">{item.name}: {item.value}人 ({item.percentage}%)</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* 吸菸原因 */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">吸菸原因分析</h3>
-      <BarChart width={600} height={300} data={data.reasons}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Bar dataKey="value" fill="#ff7300" />
-      </BarChart>
-    </div>
-
-    {/* 戒菸意願 */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">戒菸意願分佈</h3>
-      <div className="flex justify-center">
-        <PieChart width={400} height={300}>
-          <Pie
-            data={data.quitIntention}
-            cx={200}
-            cy={150}
-            outerRadius={100}
-            fill="#8884d8"
-            dataKey="value"
-            label={({ name, percentage }) => `${name}: ${percentage}%`}
-          >
-            {data.quitIntention.map((entry: any, index: number) => (
-              <Cell key={`cell-${index}`} fill={index === 0 ? '#00C49F' : '#FF8042'} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </div>
-    </div>
-  </div>
-);
-
-// 主後台組件
-const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [records, setRecords] = useState(mockStudentRecords);
-
-  const handleExport = () => {
-    // 實際實作會調用 API 匯出 Excel
-    alert('正在匯出資料到 Excel...');
+// 統計數據處理
+const generateStatistics = (records: any[]) => {
+  const stats = {
+    // 開始吸菸年齡統計
+    startSmokingStats: [
+      { name: '國小階段', value: 0 },
+      { name: '國中階段', value: 0 },
+      { name: '高中階段', value: 0 },
+      { name: '大學以後', value: 0 }
+    ],
+    // 吸菸頻率統計
+    frequencyStats: [
+      { name: '每天抽', value: 0 },
+      { name: '1-2天抽1次', value: 0 },
+      { name: '3-4天抽1次', value: 0 },
+      { name: '1週抽1次', value: 0 }
+    ],
+    // 每日吸菸量統計
+    dailyAmountStats: [
+      { name: '1-2支', value: 0 },
+      { name: '3-4支', value: 0 },
+      { name: '5-9支', value: 0 },
+      { name: '10支以上', value: 0 }
+    ],
+    // 吸菸原因統計
+    reasonsStats: [
+      { name: '專心', value: 0 },
+      { name: '放鬆', value: 0 },
+      { name: '習慣', value: 0 },
+      { name: '交際', value: 0 },
+      { name: '打發時間', value: 0 },
+      { name: '其它', value: 0 }
+    ],
+    // 菸品類型統計
+    tobaccoTypeStats: [
+      { name: '紙煙', value: 0 },
+      { name: '電子煙', value: 0 },
+      { name: '加熱煙', value: 0 }
+    ],
+    // 戒菸意願統計
+    quitIntentionStats: [
+      { name: '有戒菸意願', value: 0 },
+      { name: '無戒菸意願', value: 0 }
+    ]
   };
 
-  const completedCount = records.filter(r => r.essayCompleted).length;
-  const totalCount = records.length;
-  const averageFocus = Math.round(records.reduce((sum, r) => sum + r.focusPercentage, 0) / records.length);
-  const violationsCount = records.reduce((sum, r) => sum + r.violations, 0);
+  records.forEach(record => {
+    const survey = record.surveyData;
+    
+    // 統計開始吸菸年齡
+    const startIdx = stats.startSmokingStats.findIndex(s => s.name === survey.startSmoking);
+    if (startIdx !== -1) stats.startSmokingStats[startIdx].value++;
+    
+    // 統計吸菸頻率
+    const freqIdx = stats.frequencyStats.findIndex(s => s.name === survey.frequency);
+    if (freqIdx !== -1) stats.frequencyStats[freqIdx].value++;
+    
+    // 統計每日吸菸量
+    const amountIdx = stats.dailyAmountStats.findIndex(s => s.name === survey.dailyAmount);
+    if (amountIdx !== -1) stats.dailyAmountStats[amountIdx].value++;
+    
+    // 統計吸菸原因（可能多選）
+    survey.reasons.forEach((reason: string) => {
+      const reasonIdx = stats.reasonsStats.findIndex(s => s.name === reason);
+      if (reasonIdx !== -1) stats.reasonsStats[reasonIdx].value++;
+    });
+    
+    // 統計菸品類型
+    const typeIdx = stats.tobaccoTypeStats.findIndex(s => s.name === survey.tobaccoType);
+    if (typeIdx !== -1) stats.tobaccoTypeStats[typeIdx].value++;
+    
+    // 統計戒菸意願
+    const intentionIdx = stats.quitIntentionStats.findIndex(s => 
+      s.name === (survey.quitIntention === '有' ? '有戒菸意願' : '無戒菸意願')
+    );
+    if (intentionIdx !== -1) stats.quitIntentionStats[intentionIdx].value++;
+  });
+
+  return stats;
+};
+
+interface AdminDashboardProps {
+  // 可以接收外部數據或配置
+}
+
+const AdminDashboard: React.FC<AdminDashboardProps> = () => {
+  const [studentRecords, setStudentRecords] = useState(mockStudentRecords);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClass, setSelectedClass] = useState('all');
+  const [selectedInstructor, setSelectedInstructor] = useState('all');
+  const [activeTab, setActiveTab] = useState<'records' | 'statistics'>('records');
+
+  const statistics = generateStatistics(studentRecords);
+
+  // 過濾學生記錄
+  const filteredRecords = studentRecords.filter(record => {
+    const matchesSearch = record.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         record.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesClass = selectedClass === 'all' || record.class.includes(selectedClass);
+    const matchesInstructor = selectedInstructor === 'all' || record.instructor === selectedInstructor;
+    
+    return matchesSearch && matchesClass && matchesInstructor;
+  });
+
+  // 獲取唯一的班級和教官列表
+  const uniqueClasses = Array.from(new Set(studentRecords.map(r => r.class.split('系')[0] + '系')));
+  const uniqueInstructors = Array.from(new Set(studentRecords.map(r => r.instructor)));
+
+  // 圖表顏色
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+
+  const exportToCSV = () => {
+    const csvContent = [
+      ['姓名', '班級', '學號', '輔導教官', '完成日期', '選擇場次', '狀態'].join(','),
+      ...filteredRecords.map(record => [
+        record.name,
+        record.class,
+        record.studentId,
+        record.instructor,
+        record.completedDate,
+        record.selectedEvent,
+        record.status === 'completed' ? '已完成' : '進行中'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = '戒菸教育記錄.csv';
+    link.click();
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">戒菸教育管理系統</h1>
-            <div className="text-sm text-gray-600">
-              健行科技大學 - 軍訓室
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* 標題 */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">戒菸教育後台管理系統</h1>
+          <p className="text-gray-600">健行科技大學戒菸教育執行記錄與統計分析</p>
+        </div>
+
+        {/* 統計卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">總參與人數</p>
+                <p className="text-2xl font-bold text-gray-900">{studentRecords.length}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">已完成人數</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {studentRecords.filter(r => r.status === 'completed').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Video className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">平均完成率</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {Math.round((studentRecords.filter(r => r.status === 'completed').length / studentRecords.length) * 100)}%
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <FileText className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">本月新增</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {studentRecords.filter(r => r.completedDate.includes('2024-01')).length}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 導航標籤 */}
-        <div className="flex space-x-1 mb-8">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              activeTab === 'overview' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            總覽
-          </button>
-          <button
-            onClick={() => setActiveTab('records')}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              activeTab === 'records' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            執行記錄
-          </button>
-          <button
-            onClick={() => setActiveTab('statistics')}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              activeTab === 'statistics' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            統計分析
-          </button>
-        </div>
+        {/* 頁籤切換 */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex">
+              <button
+                onClick={() => setActiveTab('records')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm ${
+                  activeTab === 'records'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FileText className="inline-block w-4 h-4 mr-2" />
+                學生記錄
+              </button>
+              <button
+                onClick={() => setActiveTab('statistics')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm ${
+                  activeTab === 'statistics'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BarChart className="inline-block w-4 h-4 mr-2" />
+                統計分析
+              </button>
+            </nav>
+          </div>
 
-        {/* 總覽頁面 */}
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* 統計卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard
-                title="總參與人數"
-                value={totalCount}
-                icon={Users}
-                color="bg-blue-500"
-                description="本學期累計"
-              />
-              <StatCard
-                title="完成人數"
-                value={completedCount}
-                icon={CheckCircle}
-                color="bg-green-500"
-                description={`完成率 ${Math.round((completedCount/totalCount)*100)}%`}
-              />
-              <StatCard
-                title="平均專注度"
-                value={`${averageFocus}%`}
-                icon={Video}
-                color="bg-yellow-500"
-                description="影片觀看專注度"
-              />
-              <StatCard
-                title="總違規次數"
-                value={violationsCount}
-                icon={AlertTriangle}
-                color="bg-red-500"
-                description="需要關注"
-              />
-            </div>
-
-            {/* 最近記錄 */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold">最近執行記錄</h2>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {records.slice(0, 5).map(record => (
-                    <div key={record.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <div className="font-medium">{record.name}</div>
-                        <div className="text-sm text-gray-600">{record.class} - {record.studentId}</div>
-                        <div className="text-sm text-gray-600">{record.executionDate}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`px-2 py-1 rounded-full text-xs ${
-                          record.essayCompleted 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {record.essayCompleted ? '已完成' : '進行中'}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          專注度: {record.focusPercentage}%
-                        </div>
-                      </div>
-                    </div>
+          {/* 學生記錄頁籤 */}
+          {activeTab === 'records' && (
+            <div className="p-6">
+              {/* 篩選工具 */}
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="搜尋姓名或學號..."
+                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <select
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">所有科系</option>
+                  {uniqueClasses.map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
                   ))}
+                </select>
+                
+                <select
+                  value={selectedInstructor}
+                  onChange={(e) => setSelectedInstructor(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">所有教官</option>
+                  {uniqueInstructors.map(instructor => (
+                    <option key={instructor} value={instructor}>{instructor}</option>
+                  ))}
+                </select>
+                
+                <button
+                  onClick={exportToCSV}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  匯出 CSV
+                </button>
+              </div>
+
+              {/* 記錄表格 */}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        學生資訊
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        班級
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        輔導教官
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        完成日期
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        選擇場次
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        狀態
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredRecords.map((record) => (
+                      <tr key={record.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{record.name}</div>
+                            <div className="text-sm text-gray-500">{record.studentId}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.class}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.instructor}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.completedDate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.selectedEvent}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            record.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {record.status === 'completed' ? '已完成' : '進行中'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 統計分析頁籤 */}
+          {activeTab === 'statistics' && (
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* 開始吸菸年齡統計 */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">開始吸菸年齡分布</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={statistics.startSmokingStats}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 吸菸頻率統計 */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">吸菸頻率分布</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={statistics.frequencyStats}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statistics.frequencyStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 每日吸菸量統計 */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">每日吸菸量分布</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={statistics.dailyAmountStats}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 吸菸原因統計 */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">吸菸原因統計</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={statistics.reasonsStats} layout="horizontal">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis dataKey="name" type="category" />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#ffc658" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 菸品類型統計 */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">菸品類型分布</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={statistics.tobaccoTypeStats}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statistics.tobaccoTypeStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 戒菸意願統計 */}
+                <div className="bg-white p-6 rounded-lg border">
+                  <h3 className="text-lg font-semibold mb-4">戒菸意願分布</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={statistics.quitIntentionStats}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {statistics.quitIntentionStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* 執行記錄頁面 */}
-        {activeTab === 'records' && (
-          <StudentRecordsTable records={records} onExport={handleExport} />
-        )}
-
-        {/* 統計分析頁面 */}
-        {activeTab === 'statistics' && (
-          <div>
-            <div className="bg-white rounded-lg shadow p-6 mb-8">
-              <h2 className="text-xl font-semibold mb-4">吸菸情形調查統計</h2>
-              <p className="text-gray-600">
-                以下圖表分析了參與戒菸教育學生的吸菸習慣與態度，可作為後續輔導策略參考。
-              </p>
-            </div>
-            <SurveyCharts data={mockSurveyStats} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
+
 export default AdminDashboard;
