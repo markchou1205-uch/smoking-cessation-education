@@ -1,7 +1,7 @@
 // pages/api/students/index.ts
 import { NextApiRequest, NextApiResponse } from 'next';
 
-// 模擬資料庫存儲（實際應用中應使用真實資料庫）
+// 模擬資料庫（實際應用中應該使用真實資料庫）
 let studentsData: any[] = [];
 
 export default async function handler(
@@ -13,70 +13,15 @@ export default async function handler(
   switch (method) {
     case 'GET':
       try {
-        // 返回所有學生資料
         res.status(200).json({
           success: true,
-          message: '資料更新成功',
-          data: studentsData[studentIndex]
+          data: studentsData
         });
       } catch (error) {
-        console.error('更新錯誤:', error);
+        console.error('取得資料錯誤:', error);
         res.status(500).json({
           success: false,
-          error: '更新失敗'
-        });
-      }
-      break;
-
-    case 'DELETE':
-      try {
-        const { id } = req.query;
-        
-        if (!id) {
-          return res.status(400).json({
-            success: false,
-            error: '缺少學生ID'
-          });
-        }
-
-        // 尋找並刪除學生資料
-        const studentIndex = studentsData.findIndex(s => s.id === id);
-        if (studentIndex === -1) {
-          return res.status(404).json({
-            success: false,
-            error: '找不到該學生資料'
-          });
-        }
-
-        studentsData.splice(studentIndex, 1);
-
-        res.status(200).json({
-          success: true,
-          message: '資料刪除成功'
-        });
-      } catch (error) {
-        console.error('刪除錯誤:', error);
-        res.status(500).json({
-          success: false,
-          error: '刪除失敗'
-        });
-      }
-      break;
-
-    default:
-      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-      res.status(405).end(`Method ${method} Not Allowed`);
-      break;
-  }
-}json({
-          success: true,
-          data: studentsData,
-          count: studentsData.length
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          error: '獲取資料失敗'
+          error: '取得資料失敗'
         });
       }
       break;
@@ -84,19 +29,16 @@ export default async function handler(
     case 'POST':
       try {
         const studentData = req.body;
-        
+
         // 驗證必填欄位
-        const requiredFields = ['name', 'class', 'studentId', 'phone', 'instructor'];
-        const missingFields = requiredFields.filter(field => !studentData[field]);
-        
-        if (missingFields.length > 0) {
+        if (!studentData.name || !studentData.studentId || !studentData.phone || !studentData.class) {
           return res.status(400).json({
             success: false,
-            error: `缺少必填欄位: ${missingFields.join(', ')}`
+            error: '請填寫所有必填欄位'
           });
         }
 
-        // 驗證手機號碼格式
+        // 驗證手機格式
         const phoneRegex = /^\d{10}$/;
         if (!phoneRegex.test(studentData.phone)) {
           return res.status(400).json({
@@ -127,6 +69,7 @@ export default async function handler(
         const newStudent = {
           id: Date.now().toString(),
           ...studentData,
+          status: 'in_progress', // 預設狀態
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -161,8 +104,9 @@ export default async function handler(
           });
         }
 
-        // 尋找並更新學生資料
+        // 尋找學生資料的索引位置
         const studentIndex = studentsData.findIndex(s => s.id === id);
+        
         if (studentIndex === -1) {
           return res.status(404).json({
             success: false,
@@ -170,10 +114,75 @@ export default async function handler(
           });
         }
 
+        // 更新學生資料
         studentsData[studentIndex] = {
           ...studentsData[studentIndex],
           ...updateData,
           updatedAt: new Date().toISOString()
         };
 
-        res.status(200).
+        console.log('學生資料已更新:', studentsData[studentIndex]);
+
+        res.status(200).json({
+          success: true,
+          message: '資料更新成功',
+          data: studentsData[studentIndex]
+        });
+      } catch (error) {
+        console.error('更新錯誤:', error);
+        res.status(500).json({
+          success: false,
+          error: '更新失敗'
+        });
+      }
+      break;
+
+    case 'DELETE':
+      try {
+        const { id } = req.query;
+        
+        if (!id || typeof id !== 'string') {
+          return res.status(400).json({
+            success: false,
+            error: '缺少有效的學生ID'
+          });
+        }
+
+        // 尋找學生資料的索引位置
+        const studentIndex = studentsData.findIndex(s => s.id === id);
+        
+        if (studentIndex === -1) {
+          return res.status(404).json({
+            success: false,
+            error: '找不到該學生資料'
+          });
+        }
+
+        // 刪除學生資料
+        const deletedStudent = studentsData.splice(studentIndex, 1)[0];
+        
+        console.log('學生資料已刪除:', deletedStudent);
+
+        res.status(200).json({
+          success: true,
+          message: '資料刪除成功',
+          data: deletedStudent
+        });
+      } catch (error) {
+        console.error('刪除錯誤:', error);
+        res.status(500).json({
+          success: false,
+          error: '刪除失敗'
+        });
+      }
+      break;
+
+    default:
+      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
+      res.status(405).json({
+        success: false,
+        error: `Method ${method} Not Allowed`
+      });
+      break;
+  }
+}
