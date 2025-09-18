@@ -1,512 +1,175 @@
-// components/AdminDashboard.tsx
-import React, { useState, useEffect } from 'react';
-import { 
-  BarChart as RechartsBarChart, 
-  Bar as RechartsBar, 
-  XAxis as RechartsXAxis, 
-  YAxis as RechartsYAxis, 
-  CartesianGrid as RechartsCartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  PieChart as RechartsPieChart, 
-  Pie as RechartsPie, 
-  Cell as RechartsCell, 
-  ResponsiveContainer as RechartsResponsiveContainer 
-} from 'recharts';
-import { 
-  Users as LucideUsers, 
-  FileText as LucideFileText, 
-  Video as LucideVideo, 
-  CheckCircle as LucideCheckCircle, 
-  AlertTriangle as LucideAlertTriangle, 
-  Download as LucideDownload, 
-  Search as LucideSearch, 
-  RefreshCw as LucideRefreshCw,
-  BarChart3 as LucideBarChart3
-} from 'lucide-react';
+// pages/api/students/index.ts
+import { NextApiRequest, NextApiResponse } from 'next';
 
-interface AdminDashboardProps {
-  // 可以接收外部數據或配置
-}
+// 模擬資料庫（實際應用中應該使用真實資料庫）
+let studentsData: any[] = [];
 
-const AdminDashboard: React.FC<AdminDashboardProps> = () => {
-  const [studentRecords, setStudentRecords] = useState<any[]>([]);
-  const [statistics, setStatistics] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClass, setSelectedClass] = useState('all');
-  const [selectedInstructor, setSelectedInstructor] = useState('all');
-  const [activeTab, setActiveTab] = useState<'records' | 'statistics'>('records');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { method } = req;
 
-  // 載入資料
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      // 同時獲取學生記錄和統計數據
-      const [recordsResponse, statsResponse] = await Promise.all([
-        fetch('/api/students'),
-        fetch('/api/admin/statistics')
-      ]);
-
-      if (recordsResponse.ok) {
-        const recordsData = await recordsResponse.json();
-        setStudentRecords(recordsData.data || []);
+  switch (method) {
+    case 'GET':
+      try {
+        res.status(200).json({
+          success: true,
+          data: studentsData
+        });
+      } catch (error) {
+        console.error('取得資料錯誤:', error);
+        res.status(500).json({
+          success: false,
+          error: '取得資料失敗'
+        });
       }
+      break;
 
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStatistics(statsData.data);
+    case 'POST':
+      try {
+        const studentData = req.body;
+
+        // 驗證必填欄位
+        if (!studentData.name || !studentData.studentId || !studentData.phone || !studentData.class) {
+          return res.status(400).json({
+            success: false,
+            error: '請填寫所有必填欄位'
+          });
+        }
+
+        // 驗證手機格式
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(studentData.phone)) {
+          return res.status(400).json({
+            success: false,
+            error: '手機號碼格式錯誤，必須為10碼數字'
+          });
+        }
+
+        // 驗證學號格式
+        const studentIdRegex = /^[A-Za-z]\d{8}$/;
+        if (!studentIdRegex.test(studentData.studentId)) {
+          return res.status(400).json({
+            success: false,
+            error: '學號格式錯誤，必須為第1碼英文字母加8碼數字'
+          });
+        }
+
+        // 檢查學號是否已存在
+        const existingStudent = studentsData.find(s => s.studentId === studentData.studentId);
+        if (existingStudent) {
+          return res.status(400).json({
+            success: false,
+            error: '學號已存在'
+          });
+        }
+
+        // 添加 ID 和時間戳
+        const newStudent = {
+          id: Date.now().toString(),
+          ...studentData,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        // 儲存到模擬資料庫
+        studentsData.push(newStudent);
+
+        console.log('新學生資料已添加:', newStudent);
+
+        res.status(201).json({
+          success: true,
+          message: '資料提交成功',
+          data: newStudent
+        });
+      } catch (error) {
+        console.error('API錯誤:', error);
+        res.status(500).json({
+          success: false,
+          error: '伺服器錯誤'
+        });
       }
+      break;
 
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('載入資料錯誤:', error);
-      alert('載入資料失敗，請稍後再試');
-    } finally {
-      setLoading(false);
-    }
-  };
+    case 'PUT':
+      try {
+        const { id, ...updateData } = req.body;
+        
+        if (!id) {
+          return res.status(400).json({
+            success: false,
+            error: '缺少學生ID'
+          });
+        }
 
-  // 初始載入
-  useEffect(() => {
-    loadData();
-  }, []);
+        // 尋找並更新學生資料
+        const studentIndex = studentsData.findIndex(s => s.id === id);
+        if (studentIndex === -1) {
+          return res.status(404).json({
+            success: false,
+            error: '找不到該學生資料'
+          });
+        }
 
-  // 過濾學生記錄
-  const filteredRecords = studentRecords.filter(record => {
-    const matchesSearch = record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.studentId?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesClass = selectedClass === 'all' || record.class?.includes(selectedClass);
-    const matchesInstructor = selectedInstructor === 'all' || record.instructor === selectedInstructor;
-    
-    return matchesSearch && matchesClass && matchesInstructor;
-  });
+        studentsData[studentIndex] = {
+          ...studentsData[studentIndex],
+          ...updateData,
+          updatedAt: new Date().toISOString()
+        };
 
-  // 獲取唯一的班級和教官列表
-  const uniqueClasses = Array.from(new Set(
-    studentRecords
-      .map(r => r.class?.split('系')[0] + '系')
-      .filter(Boolean)
-  ));
-  
-  const uniqueInstructors = Array.from(new Set(
-    studentRecords
-      .map(r => r.instructor)
-      .filter(Boolean)
-  ));
+        res.status(200).json({
+          success: true,
+          message: '資料更新成功',
+          data: studentsData[studentIndex] // 修正：使用正確的變數名稱
+        });
+      } catch (error) {
+        console.error('更新錯誤:', error);
+        res.status(500).json({
+          success: false,
+          error: '更新失敗'
+        });
+      }
+      break;
 
-  // 圖表顏色
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+    case 'DELETE':
+      try {
+        const { id } = req.query;
+        
+        if (!id) {
+          return res.status(400).json({
+            success: false,
+            error: '缺少學生ID'
+          });
+        }
 
-  const exportToCSV = () => {
-    const csvContent = [
-      ['姓名', '班級', '學號', '手機', '輔導教官', '建立日期', '狀態'].join(','),
-      ...filteredRecords.map(record => [
-        record.name || '',
-        record.class || '',
-        record.studentId || '',
-        record.phone || '',
-        record.instructor || '',
-        record.createdAt ? new Date(record.createdAt).toLocaleDateString() : '',
-        record.status === 'completed' ? '已完成' : '進行中'
-      ].join(','))
-    ].join('\n');
+        // 尋找並刪除學生資料
+        const studentIndex = studentsData.findIndex(s => s.id === id);
+        if (studentIndex === -1) {
+          return res.status(404).json({
+            success: false,
+            error: '找不到該學生資料'
+          });
+        }
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `戒菸教育記錄_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-  };
+        studentsData.splice(studentIndex, 1);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <LucideRefreshCw className="h-6 w-6 animate-spin text-blue-600" />
-          <span className="text-lg">載入中...</span>
-        </div>
-      </div>
-    );
+        res.status(200).json({
+          success: true,
+          message: '資料刪除成功'
+        });
+      } catch (error) {
+        console.error('刪除錯誤:', error);
+        res.status(500).json({
+          success: false,
+          error: '刪除失敗'
+        });
+      }
+      break;
+
+    default:
+      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
+      res.status(405).end(`Method ${method} Not Allowed`);
+      break;
   }
-
-  return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* 標題與刷新按鈕 */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">戒菸教育後台管理系統</h1>
-            <p className="text-gray-600">健行科技大學戒菸教育執行記錄與統計分析</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            {lastUpdated && (
-              <span className="text-sm text-gray-500">
-                最後更新：{lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
-            <button
-              onClick={loadData}
-              className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <LucideRefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              重新載入
-            </button>
-          </div>
-        </div>
-
-        {/* 統計卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <LucideUsers className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">總參與人數</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statistics?.totalStudents || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <LucideCheckCircle className="h-8 w-8 text-green-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">已完成人數</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statistics?.completedStudents || 0}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <LucideVideo className="h-8 w-8 text-purple-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">完成率</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {statistics?.completionRate || 0}%
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <LucideFileText className="h-8 w-8 text-orange-600" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">今日新增</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {studentRecords.filter(r => {
-                    const today = new Date().toDateString();
-                    const recordDate = new Date(r.createdAt).toDateString();
-                    return recordDate === today;
-                  }).length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 頁籤切換 */}
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex">
-              <button
-                onClick={() => setActiveTab('records')}
-                className={`py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'records'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <LucideFileText className="inline-block w-4 h-4 mr-2" />
-                學生記錄
-              </button>
-              <button
-                onClick={() => setActiveTab('statistics')}
-                className={`py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'statistics'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <LucideBarChart3 className="inline-block w-4 h-4 mr-2" />
-                統計分析
-              </button>
-            </nav>
-          </div>
-
-          {/* 學生記錄頁籤 */}
-          {activeTab === 'records' && (
-            <div className="p-6">
-              {/* 篩選工具 */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-1">
-                  <div className="relative">
-                    <LucideSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="搜尋姓名或學號..."
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-                
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">所有科系</option>
-                  {uniqueClasses.map(cls => (
-                    <option key={cls} value={cls}>{cls}</option>
-                  ))}
-                </select>
-                
-                <select
-                  value={selectedInstructor}
-                  onChange={(e) => setSelectedInstructor(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">所有教官</option>
-                  {uniqueInstructors.map(instructor => (
-                    <option key={instructor} value={instructor}>{instructor}</option>
-                  ))}
-                </select>
-                
-                <button
-                  onClick={exportToCSV}
-                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <LucideDownload className="h-4 w-4 mr-2" />
-                  匯出 CSV
-                </button>
-              </div>
-
-              {/* 記錄表格 */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        學生資訊
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        班級
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        手機
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        輔導教官
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        建立日期
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        狀態
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredRecords.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                          {searchTerm || selectedClass !== 'all' || selectedInstructor !== 'all' 
-                            ? '沒有符合條件的記錄' 
-                            : '目前沒有學生記錄'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredRecords.map((record, index) => (
-                        <tr key={record.id || index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{record.name}</div>
-                              <div className="text-sm text-gray-500">{record.studentId}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.class}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.phone}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.instructor}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {record.createdAt ? new Date(record.createdAt).toLocaleDateString() : '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              record.status === 'completed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {record.status === 'completed' ? '已完成' : '進行中'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 分頁資訊 */}
-              <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
-                <span>共 {filteredRecords.length} 筆記錄</span>
-                <span>顯示 1-{Math.min(filteredRecords.length, 50)} 筆</span>
-              </div>
-            </div>
-          )}
-
-          {/* 統計分析頁籤 */}
-          {activeTab === 'statistics' && statistics && (
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* 開始吸菸年齡統計 */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">開始吸菸年齡分布</h3>
-                  <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={statistics.startSmokingStats}>
-                      <RechartsCartesianGrid strokeDasharray="3 3" />
-                      <RechartsXAxis dataKey="name" />
-                      <RechartsYAxis />
-                      <RechartsTooltip />
-                      <RechartsBar dataKey="value" fill="#8884d8" />
-                    </RechartsBarChart>
-                  </RechartsResponsiveContainer>
-                </div>
-
-                {/* 吸菸頻率統計 */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">吸菸頻率分布</h3>
-                  <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsPieChart>
-                      <RechartsPie
-                        data={statistics.frequencyStats}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {statistics.frequencyStats.map((entry: any, index: number) => (
-                          <RechartsCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </RechartsPie>
-                      <RechartsTooltip />
-                    </RechartsPieChart>
-                  </RechartsResponsiveContainer>
-                </div>
-
-                {/* 每日吸菸量統計 */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">每日吸菸量分布</h3>
-                  <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={statistics.dailyAmountStats}>
-                      <RechartsCartesianGrid strokeDasharray="3 3" />
-                      <RechartsXAxis dataKey="name" />
-                      <RechartsYAxis />
-                      <RechartsTooltip />
-                      <RechartsBar dataKey="value" fill="#82ca9d" />
-                    </RechartsBarChart>
-                  </RechartsResponsiveContainer>
-                </div>
-
-                {/* 吸菸原因統計 */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">吸菸原因統計</h3>
-                  <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={statistics.reasonsStats} layout="horizontal">
-                      <RechartsCartesianGrid strokeDasharray="3 3" />
-                      <RechartsXAxis type="number" />
-                      <RechartsYAxis dataKey="name" type="category" width={60} />
-                      <RechartsTooltip />
-                      <RechartsBar dataKey="value" fill="#ffc658" />
-                    </RechartsBarChart>
-                  </RechartsResponsiveContainer>
-                </div>
-
-                {/* 菸品類型統計 */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">菸品類型分布</h3>
-                  <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsPieChart>
-                      <RechartsPie
-                        data={statistics.tobaccoTypeStats}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {statistics.tobaccoTypeStats.map((entry: any, index: number) => (
-                          <RechartsCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </RechartsPie>
-                      <RechartsTooltip />
-                    </RechartsPieChart>
-                  </RechartsResponsiveContainer>
-                </div>
-
-                {/* 戒菸意願統計 */}
-                <div className="bg-white p-6 rounded-lg border">
-                  <h3 className="text-lg font-semibold mb-4">戒菸意願分布</h3>
-                  <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsPieChart>
-                      <RechartsPie
-                        data={statistics.quitIntentionStats}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {statistics.quitIntentionStats.map((entry: any, index: number) => (
-                          <RechartsCell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </RechartsPie>
-                      <RechartsTooltip />
-                    </RechartsPieChart>
-                  </RechartsResponsiveContainer>
-                </div>
-
-                {/* 輔導教官統計 */}
-                {statistics.instructorStats && statistics.instructorStats.length > 0 && (
-                  <div className="bg-white p-6 rounded-lg border lg:col-span-2">
-                    <h3 className="text-lg font-semibold mb-4">輔導教官分佈</h3>
-                    <RechartsResponsiveContainer width="100%" height={300}>
-                      <RechartsBarChart data={statistics.instructorStats}>
-                        <RechartsCartesianGrid strokeDasharray="3 3" />
-                        <RechartsXAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                        <RechartsYAxis />
-                        <RechartsTooltip />
-                        <RechartsBar dataKey="value" fill="#ff7c7c" />
-                      </RechartsBarChart>
-                    </RechartsResponsiveContainer>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default AdminDashboard;
+}
