@@ -7,11 +7,6 @@ const AdminPage: React.FC = () => {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loginForm, setLoginForm] = useState({
-    username: '',
-    password: ''
-  });
-  const [loginError, setLoginError] = useState('');
 
   // 檢查登入狀態
   useEffect(() => {
@@ -26,53 +21,23 @@ const AdminPage: React.FC = () => {
           if (now < parseInt(adminExpiry)) {
             setIsAuthenticated(true);
           } else {
-            // Token 過期，清除本地存儲
+            // Token 過期，清除本地存儲並重定向
             localStorage.removeItem('adminToken');
             localStorage.removeItem('adminExpiry');
+            router.push('/admin/login');
+            return;
           }
+        } else {
+          // 沒有登入，重定向到登入頁面
+          router.push('/admin/login');
+          return;
         }
       }
       setLoading(false);
     };
 
     checkAuth();
-  }, []);
-
-  // 登入處理
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-
-    try {
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginForm),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // 設定登入狀態和過期時間（24小時後）
-        const expiry = new Date().getTime() + (24 * 60 * 60 * 1000);
-        
-        // 確保在客戶端執行
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('adminToken', data.token);
-          localStorage.setItem('adminExpiry', expiry.toString());
-        }
-        
-        setIsAuthenticated(true);
-      } else {
-        setLoginError(data.error || '登入失敗');
-      }
-    } catch (error) {
-      console.error('登入錯誤:', error);
-      setLoginError('連線錯誤，請稍後再試');
-    }
-  };
+  }, [router]);
 
   // 登出處理
   const handleLogout = () => {
@@ -81,8 +46,7 @@ const AdminPage: React.FC = () => {
       localStorage.removeItem('adminToken');
       localStorage.removeItem('adminExpiry');
     }
-    setIsAuthenticated(false);
-    setLoginForm({ username: '', password: '' });
+    router.push('/admin/login');
   };
 
   if (loading) {
@@ -96,60 +60,7 @@ const AdminPage: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">管理員登入</h2>
-            <p className="text-gray-600 mt-2">戒菸教育後台管理系統</p>
-          </div>
-          
-          <form onSubmit={handleLogin}>
-            <div className="mb-4">
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                帳號
-              </label>
-              <input
-                type="text"
-                id="username"
-                value={loginForm.username}
-                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            <div className="mb-6">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                密碼
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={loginForm.password}
-                onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            {loginError && (
-              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {loginError}
-              </div>
-            )}
-            
-            <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              登入
-            </button>
-          </form>
-          
-          <div className="mt-4 text-sm text-gray-500 text-center">
-            <p>預設帳號：admin</p>
-            <p>預設密碼：admin123</p>
-          </div>
-        </div>
+        <div className="text-lg">正在重定向到登入頁面...</div>
       </div>
     );
   }
