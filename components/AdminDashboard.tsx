@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart as RechartsBarChart, 
-  Bar, 
+  Bar as RechartsBar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -463,7 +463,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" fill="#ff7c7c" />
+                        <RechartsBar dataKey="value" fill="#ff7c7c" />
                       </RechartsBarChart>
                     </ResponsiveContainer>
                   </div>
@@ -914,7 +914,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="value" fill="#8884d8" />
+                      <RechartsBar dataKey="value" fill="#8884d8" />
                     </RechartsBarChart>
                   </ResponsiveContainer>
                 </div>
