@@ -4,6 +4,8 @@ declare global {
     skipToNext: () => void;
     setWatchTime: (minutes: number) => void;
     addWatchTime: (minutes: number) => void;
+    skipRetakeVideo: () => void;
+    setRetakeWatchTime: (minutes: number) => void;
   }
 }
 
