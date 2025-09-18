@@ -312,6 +312,16 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
   const [showResults, setShowResults] = useState(false);
   const [quizResults, setQuizResults] = useState<any>(null);
 
+  // 當進入重考模式時，重置所有狀態
+  useEffect(() => {
+    if (isRetake) {
+      setAnswers({});
+      setShowResults(false);
+      setQuizResults(null);
+      console.log('重新作答模式：狀態已重置');
+    }
+  }, [isRetake, wrongQuestions]);
+
   // 決定要顯示的題目
   const questionsToShow = isRetake 
     ? quizQuestions.filter(q => wrongQuestions.includes(q.id))
@@ -367,6 +377,14 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
     return uniqueVideoNumbers.map(num => videoInfo[num]);
   };
 
+  // 處理重新作答按鈕點擊
+  const handleRetryQuiz = () => {
+    console.log('點擊重新作答按鈕');
+    const wrongQuestionIds = quizResults.wrongAnswers.map((wa: any) => wa.questionId);
+    console.log('錯誤題目ID:', wrongQuestionIds);
+    onRetry(wrongQuestionIds);
+  };
+
   if (showResults && !quizResults.allCorrect) {
     const videosToRewatch = getVideosToRewatch(quizResults.wrongAnswers);
     const requiredWatchTime = Math.floor(videosToRewatch.reduce((sum: number, video: any) => sum + video.duration, 0) / 2);
@@ -376,7 +394,7 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
         wrongAnswers={quizResults.wrongAnswers}
         videosToRewatch={videosToRewatch}
         requiredWatchTime={requiredWatchTime}
-        onRetryQuiz={() => onRetry(quizResults.wrongAnswers.map((wa: any) => wa.questionId))}
+        onRetryQuiz={handleRetryQuiz}
       />
     );
   }
@@ -409,6 +427,7 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
               <h4 className="font-medium text-orange-800">重新作答</h4>
               <p className="text-orange-700 text-sm mt-1">
                 請針對之前答錯的題目重新作答，全部答對後才能進入下一階段。
+                共 {questionsToShow.length} 題需要重新作答。
               </p>
             </div>
           </div>
@@ -429,6 +448,7 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
                     type="radio"
                     name={`question-${question.id}`}
                     value="true"
+                    checked={answers[question.id] === true}
                     onChange={() => handleAnswerChange(question.id, true)}
                     className="mr-2"
                   />
@@ -439,6 +459,7 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
                     type="radio"
                     name={`question-${question.id}`}
                     value="false"
+                    checked={answers[question.id] === false}
                     onChange={() => handleAnswerChange(question.id, false)}
                     className="mr-2"
                   />
@@ -453,6 +474,7 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
                       type="radio"
                       name={`question-${question.id}`}
                       value={optionIndex}
+                      checked={answers[question.id] === optionIndex}
                       onChange={() => handleAnswerChange(question.id, optionIndex)}
                       className="mr-2"
                     />
@@ -478,10 +500,56 @@ const QuizMainPage: React.FC<QuizPageProps> = ({
           送出評分
         </button>
         
+        <div className="mt-2 text-sm text-gray-600">
+          已回答：{Object.keys(answers).length} / {questionsToShow.length} 題
+        </div>
+        
         {Object.keys(answers).length !== questionsToShow.length && (
           <p className="text-gray-500 text-sm mt-2">
             請回答所有題目後再送出
           </p>
+        )}
+
+        {/* 開發者測試按鈕 */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
+            <p className="font-medium text-gray-700 mb-2">開發者測試模式：</p>
+            <div className="space-x-2">
+              <button
+                onClick={() => {
+                  // 自動填寫所有答案（用於測試）
+                  const autoAnswers: Record<number, any> = {};
+                  questionsToShow.forEach(q => {
+                    autoAnswers[q.id] = q.answer;
+                  });
+                  setAnswers(autoAnswers);
+                }}
+                className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+              >
+                自動填入正確答案
+              </button>
+              <button
+                onClick={() => {
+                  // 自動填寫錯誤答案（用於測試重看功能）
+                  const wrongAnswers: Record<number, any> = {};
+                  questionsToShow.forEach(q => {
+                    if (q.type === 'boolean') {
+                      wrongAnswers[q.id] = !q.answer;
+                    } else {
+                      wrongAnswers[q.id] = q.answer === 0 ? 1 : 0;
+                    }
+                  });
+                  setAnswers(wrongAnswers);
+                }}
+                className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
+              >
+                填入錯誤答案
+              </button>
+            </div>
+            <p className="text-gray-500 mt-1">
+              當前模式: {isRetake ? '重新作答' : '首次測驗'} | 錯誤題目: {wrongQuestions.join(', ') || '無'}
+            </p>
+          </div>
         )}
       </div>
     </div>
