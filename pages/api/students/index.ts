@@ -1,22 +1,33 @@
 // pages/api/students/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabaseAdmin'; // 依你的專案層級，這是從 pages/api/students/index.ts 回到 /lib
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
-function parseData(d: any) {
-  if (!d) return {};
-  if (typeof d === 'object') return d;
-  try { return JSON.parse(String(d)); } catch { return {}; }
+// ===== helpers =====
+function parseObj(v: any) {
+  if (!v) return {};
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(String(v)); } catch { return {}; }
 }
-function pick<T = any>(obj: any, keys: string[], fallback: any = ''): T {
-  for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && v !== '') return v; }
-  return fallback;
+function pick<T = any>(obj: any, keys: string[], fallback?: any): T {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && v !== '') return v as T;
+  }
+  return fallback as T;
 }
-function toArrayMaybe(v: any): string[] {
+function toArray(v: any): string[] {
   if (!v) return [];
   if (Array.isArray(v)) return v.filter(Boolean).map(String);
   return String(v).split(/[,，;；、\s]+/).filter(Boolean);
 }
-function normalizeClassName(cls: string): string {
+function toBool(v: any): boolean | null {
+  if (v === undefined || v === null || v === '') return null;
+  const s = String(v).trim();
+  if (['true','1','yes','是','有','y'].includes(s)) return true;
+  if (['false','0','no','否','沒有','n','无'].includes(s)) return false;
+  return null;
+}
+function normalizeClassName(cls: string) {
   if (!cls) return '';
   const i = cls.indexOf('系');
   return i >= 0 ? cls.slice(0, i + 1) : cls;
@@ -24,39 +35,79 @@ function normalizeClassName(cls: string): string {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // ============== 新增一筆（POST） ==============
     if (req.method === 'POST') {
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-      const d = typeof body.data === 'object' ? body.data : (()=>{ try { return JSON.parse(body.data) } catch { return {} } })();
+      const raw = typeof req.body === 'string' ? (()=>{ try { return JSON.parse(req.body); } catch { return {}; } })() : (req.body || {});
+      const form = typeof raw.form === 'object' ? raw.form : raw;     // 允許 {form:{...}} 或直接 {...}
+      const dIn  = parseObj(form.data);                               // 允許把問卷塞在 data 裡
 
-      // 接受多種鍵名做 fallback
-      const student_id =
-        body.student_id ?? body.studentId ?? d?.student_id ?? d?.studentId ?? d?.學號 ?? '';
+      // --- 基本資料（姓名/班級/學號/手機/教官）---
+      const name       = pick<string>({ ...form, ...dIn }, ['name','姓名']);
+      const student_id = pick<string>({ ...form, ...dIn }, ['student_id','studentId','學號'], '');
+      const cls        = pick<string>({ ...form, ...dIn }, ['class','班級'], '');
+      const department = pick<string>({ ...form, ...dIn }, ['department','科系','dept'], '');
+      const phone      = pick<string>({ ...form, ...dIn }, ['phone','手機','phoneNumber'], '');
+      const instructor = pick<string>({ ...form, ...dIn }, ['instructor','輔導教官','instructorName'], '');
 
-      const title = body.title ?? '';
-      const score = typeof body.score === 'number' ? body.score : null;
-      const data  = d && Object.keys(d).length ? d : {};
+      // --- 問卷題目（照你畫面上的題目）---
+      const startSmokingPeriod = pick<string>({ ...form, ...dIn }, [
+        'startSmokingPeriod','你從什麼時候開始吸菸？','開始吸菸時間'
+      ]);
+      const weeklyFrequency    = pick<string>({ ...form, ...dIn }, [
+        'weeklyFrequency','你一週抽幾次？'
+      ]);
+      const dailyAmount        = pick<string>({ ...form, ...dIn }, [
+        'dailyAmount','你一天吸菸幾支？','每日支數'
+      ]);
 
-      // 不再以缺少 student_id 當錯，直接寫入（你要強制必填再把這段打開）
-      // if (!student_id) return res.status(400).json({ error: "Missing 'student_id'" });
+      // 多選：原因
+      let smokingReasons = toArray(pick({ ...form, ...dIn }, ['smokingReasons','你平常吸菸的原因是什麼？']));
+      // 多選：菸品種類（接受「陣列」或三個 checkbox 布林）
+      let productTypesUsed = toArray(pick({ ...form, ...dIn }, ['productTypesUsed','你是使用哪種菸品？']));
+      const pElectronic = toBool(pick({ ...form, ...dIn }, ['電子煙','electronic']));
+      const pCigarette  = toBool(pick({ ...form, ...dIn }, ['紙菸','紙煙','cigarette']));
+      const pHeated     = toBool(pick({ ...form, ...dIn }, ['加熱煙','heated']));
+      if (!productTypesUsed.length) {
+        const b: string[] = [];
+        if (pElectronic) b.push('電子煙');
+        if (pCigarette)  b.push('紙菸');
+        if (pHeated)     b.push('加熱煙');
+        productTypesUsed = b;
+      }
 
+      const familySmoker        = toBool(pick({ ...form, ...dIn }, ['familySmoker','你家中有人吸菸嗎？']));
+      const knowSchoolBan       = toBool(pick({ ...form, ...dIn }, ['knowSchoolBan','你知道校園全面禁止吸菸嗎？']));
+      const seenTobaccoAds      = toBool(pick({ ...form, ...dIn }, ['seenTobaccoAds','你有在學校看過菸商廣告嗎？']));
+      const everVaped           = toBool(pick({ ...form, ...dIn }, ['everVaped','你有曾抽過電子煙嗎？']));
+      const wantQuit            = toBool(pick({ ...form, ...dIn }, ['wantQuit','你現在有沒有戒菸的想法？']));
+      const wantsCounseling     = toBool(pick({ ...form, ...dIn }, ['wantsCounseling','你現在有沒有戒菸的需求？']));
+      const interestedInFreeSvc = toBool(pick({ ...form, ...dIn }, ['interestedInFreeProgram','政府有提供免費的戒菸輔導，你有興趣瞭解嗎？']));
+
+      // 統一存到 data（jsonb）
+      const data = {
+        name, department, class: cls, phone, instructor,
+        startSmokingPeriod, weeklyFrequency, dailyAmount,
+        smokingReasons, productTypesUsed,
+        familySmoker, knowSchoolBan, seenTobaccoAds,
+        everVaped, wantQuit, wantsCounseling, interestedInFreeSvc
+      };
+
+      // 允許空學號寫入（若要強制，改成 if(!student_id) return res.status(400).json({error:'缺少學號'})）
       const { data: inserted, error } = await supabaseAdmin
         .from('submissions')
-        .insert([{ student_id, title, score, data }])
-        .select('*')
-        .single();
-
+        .insert([{ student_id, title: form.title ?? '', score: typeof form.score === 'number' ? form.score : null, data }])
+        .select('*').single();
       if (error) throw error;
+
       return res.status(201).json({ ok: true, item: inserted });
     }
 
-    // —— 讀取列表（GET）——
+    // ============== 讀列表（GET） ==============
     const { from, to } = req.query as { from?: string; to?: string };
-
     let q = supabaseAdmin
       .from('submissions')
       .select('id, student_id, title, score, data, created_at')
       .order('created_at', { ascending: false });
-
     if (from) q = q.gte('created_at', new Date(`${from}T00:00:00`).toISOString());
     if (to)   q = q.lte('created_at', new Date(`${to}T23:59:59.999`).toISOString());
 
@@ -64,27 +115,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) throw error;
 
     const list = (data ?? []).map((row: any) => {
-      const d = parseData(row.data);
-      const name        = pick<string>({ ...row, ...d }, ['name', 'studentName', '姓名']);
-      const department  = pick<string>({ ...row, ...d }, ['department', '科系', 'dept']);
-      const className   = normalizeClassName(pick<string>({ ...row, ...d }, ['class', '班級', 'className']));
-      const phone       = pick<string>({ ...row, ...d }, ['phone', 'mobile', '手機', 'phoneNumber']);
-      const instructor  = pick<string>({ ...row, ...d }, ['instructor', '輔導教官', 'instructorName']);
-      const status      = pick<string>({ ...row, ...d }, ['status'], 'completed');
-
-      const startSmoking  = pick<string>({ ...row, ...d }, ['startSmoking', 'start_smoking', '開始吸菸年齡']);
-      const frequency     = pick<string>({ ...row, ...d }, ['frequency', '吸菸頻率']);
-      const dailyAmount   = pick<string>({ ...row, ...d }, ['dailyAmount', 'daily_amount', '每日支數']);
-      const tobaccoType   = pick<string>({ ...row, ...d }, ['tobaccoType', 'tobacco_type', '菸品種類']);
-      const quitIntention = pick<string>({ ...row, ...d }, ['quitIntention', 'quit_intention', '戒菸意圖']);
-      const reasons       = toArrayMaybe(pick<string | string[]>({ ...row, ...d }, ['reasons', '戒菸原因']));
-
+      const d = parseObj(row.data);
       return {
         id: row.id,
         student_id: row.student_id ?? '',
-        name, department, class: className, phone, instructor, status,
+        name: d.name ?? '',
+        department: d.department ?? '',
+        class: normalizeClassName(d.class ?? ''),
+        phone: d.phone ?? '',
+        instructor: d.instructor ?? '',
+        status: 'completed',
         createdAt: row.created_at,
-        startSmoking, frequency, dailyAmount, tobaccoType, quitIntention, reasons,
+
+        // 問卷欄位（直接給前端顯示/統計）
+        startSmokingPeriod: d.startSmokingPeriod ?? null,
+        weeklyFrequency:    d.weeklyFrequency ?? null,
+        dailyAmount:        d.dailyAmount ?? null,
+        smokingReasons:     Array.isArray(d.smokingReasons) ? d.smokingReasons : toArray(d.smokingReasons),
+        productTypesUsed:   Array.isArray(d.productTypesUsed) ? d.productTypesUsed : toArray(d.productTypesUsed),
+        familySmoker:        d.familySmoker,
+        knowSchoolBan:       d.knowSchoolBan,
+        seenTobaccoAds:      d.seenTobaccoAds,
+        everVaped:           d.everVaped,
+        wantQuit:            d.wantQuit,
+        wantsCounseling:     d.wantsCounseling,
+        interestedInFreeSvc: d.interestedInFreeSvc,
+
         title: row.title ?? '',
         score: typeof row.score === 'number' ? row.score : null,
       };
