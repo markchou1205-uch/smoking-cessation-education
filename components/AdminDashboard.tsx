@@ -152,8 +152,11 @@ async function loadData() {
     if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
     if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
 
-    const res = await fetch(u.toString(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('fetch /api/student failed');
+const res = await fetch(u.toString(), { cache: 'no-store' });
+if (!res.ok) {
+  const text = await res.text();
+  throw new Error(`fetch /api/student failed: ${res.status} ${text}`);
+}
 
     const { data } = await res.json(); // 後端已把 submissions 轉成前端要的 StudentRecord 形狀
     setStudentRecords(data || []);
