@@ -74,12 +74,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const [selectedInstructor, setSelectedInstructor] = useState('all');
   const [activeTab, setActiveTab] = useState<'records' | 'statistics'>('records');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [fromDate, setFromDate] = useState(ymdNDaysAgo(30));
+  const [toDate, setToDate]     = useState(todayYMD());
+ 
    // 小工具：把陣列依 key 彙整計數
    const tally = (arr: (string|undefined|null)[])=>{
      const map = new Map<string, number>();
      for (const v of arr) if (v) map.set(v, (map.get(v)||0)+1);
      return Array.from(map.entries()).map(([name,value])=>({name, value}));
    };
+  // === 日期工具 ===
+const pad = (n: number) => String(n).padStart(2, "0");
+const todayYMD = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const ymdNDaysAgo = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - (n - 1));
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+const startOfDay = (ymd: string) => new Date(`${ymd}T00:00:00`);
+const endOfDay   = (ymd: string) => new Date(`${ymd}T23:59:59.999`);
+
    // 由學生紀錄「依日期區間」計算統計
    const computeStatistics = (records: StudentRecord[]): Statistics => {
      const from = startOfDay(fromDate).getTime();
