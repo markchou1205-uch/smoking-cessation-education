@@ -1,28 +1,21 @@
-// pages/api/students.ts
+// pages/api/student/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../lib/supabaseAdmin';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin'; // 若你有 @ 別名就改成 '@/lib/supabaseAdmin'
 
-// 解析 data 欄（jsonb 或字串）
 function parseData(d: any) {
   if (!d) return {};
   if (typeof d === 'object') return d;
   try { return JSON.parse(String(d)); } catch { return {}; }
 }
-
 function pick<T = any>(obj: any, keys: string[], fallback: any = ''): T {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v !== undefined && v !== null && v !== '') return v;
-  }
+  for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && v !== '') return v; }
   return fallback;
 }
-
 function toArrayMaybe(v: any): string[] {
   if (!v) return [];
   if (Array.isArray(v)) return v.filter(Boolean).map(String);
   return String(v).split(/[,，;；、\s]+/).filter(Boolean);
 }
-
 function normalizeClassName(cls: string): string {
   if (!cls) return '';
   const i = cls.indexOf('系');
@@ -31,7 +24,6 @@ function normalizeClassName(cls: string): string {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 可選：日期區間過濾（YYYY-MM-DD），前端若沒帶就全撈
     const { from, to } = req.query as { from?: string; to?: string };
 
     let q = supabaseAdmin
@@ -47,7 +39,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const list = (data ?? []).map((row: any) => {
       const d = parseData(row.data);
-      // 盡量從多個可能鍵名取得資料，避免你前面表單鍵名不一致
       const name        = pick<string>({ ...row, ...d }, ['name', 'studentName', '姓名']);
       const department  = pick<string>({ ...row, ...d }, ['department', '科系', 'dept']);
       const className   = normalizeClassName(pick<string>({ ...row, ...d }, ['class', '班級', 'className']));
@@ -65,16 +56,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return {
         id: row.id,
         student_id: row.student_id ?? '',
-        name,
-        department,
-        class: className,
-        phone,
-        instructor,
-        status,
+        name, department, class: className, phone, instructor, status,
         createdAt: row.created_at,
-        // 供統計第二頁使用的欄位
         startSmoking, frequency, dailyAmount, tobaccoType, quitIntention, reasons,
-        // 你原本就有的欄位（保留）
         title: row.title ?? '',
         score: typeof row.score === 'number' ? row.score : null,
       };
@@ -85,3 +69,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ error: e?.message ?? 'Internal Error' });
   }
 }
+export { default } from '../student';
