@@ -1,6 +1,6 @@
 // pages/api/students/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../../lib/supabaseAdmin'; // 依你的專案層級，這是從 pages/api/students/index.ts 回到 /lib
+import { supabaseAdmin } from '../../../lib/supabaseAdmin'; // 依你的專案層級，這是從 pages/api/students/index.ts 回到 /lib
 
 function parseData(d: any) {
   if (!d) return {};
