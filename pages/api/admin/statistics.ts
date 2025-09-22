@@ -1,6 +1,6 @@
 // pages/api/admin/statistics.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../lib/supabaseAdmin';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
 // ---------- helpers ----------
 function pad(n: number) { return String(n).padStart(2, '0'); }
