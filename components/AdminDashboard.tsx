@@ -63,6 +63,18 @@ interface Statistics {
   quitIntentionStats: { name: string; value: number }[];
   instructorStats: { name: string; value: number }[];
   classStats: { name: string; value: number }[];
+    // 新鍵名（後端 /api/admin/statistics 回傳）
+  startSmokingPeriodStats?: { name: string; value: number }[];
+  weeklyFrequencyStats?: { name: string; value: number }[];
+  smokingReasonsStats?: { name: string; value: number }[];
+  productTypesUsedStats?: { name: string; value: number }[];
+  wantQuitStats?: { name: string; value: number }[];
+  familySmokerStats?: { name: string; value: number }[];
+  knowSchoolBanStats?: { name: string; value: number }[];
+  seenTobaccoAdsStats?: { name: string; value: number }[];
+  everVapedStats?: { name: string; value: number }[];
+  wantsCounselingStats?: { name: string; value: number }[];
+  interestedInFreeSvcStats?: { name: string; value: number }[];
 }
 // ---- Date helpers (module-level; hoisted) ----
 function pad(n: number) { return String(n).padStart(2, '0'); }
@@ -92,7 +104,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [fromDate, setFromDate] = useState(ymdNDaysAgo(30));
   const [toDate, setToDate]     = useState(todayYMD());
- 
+  const TZ_OFFSET = 480;
+
    // 小工具：把陣列依 key 彙整計數
    const tally = (arr: (string|undefined|null)[])=>{
      const map = new Map<string, number>();
@@ -173,12 +186,32 @@ if (!res.ok) {
     setLoading(false);
   }
 }
+async function loadStats() {
+  try {
+    const u = new URL('/api/admin/statistics', window.location.origin);
+    if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
+    if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
+    u.searchParams.set('tzOffset', String(TZ_OFFSET));
+
+    const res = await fetch(u.toString(), { cache: 'no-store' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`fetch /api/admin/statistics failed: ${res.status} ${text}`);
+    }
+    const data = await res.json();
+    // 直接把後端的統計物件塞進 state（已含我們要的各題目分布）
+    setStatistics(data);
+  } catch (err) {
+    console.error(err);
+  }
+}
 
 
   // 初始載入
-  useEffect(() => {
-    loadData();
-  }, []);
+useEffect(() => {
+  loadData();
+  loadStats();
+}, []);
    // 日期區間或原始資料變更 → 重新計算統計
    useEffect(() => {
      if (studentRecords.length) {
@@ -486,23 +519,40 @@ if (!res.ok) {
                           onChange={(e)=>setToDate(e.target.value)}
                           className="border rounded px-3 py-2"/>
                  </div>
-                 <button onClick={()=>setStatistics(computeStatistics(studentRecords))}
-                         className="h-10 px-4 rounded bg-black text-white">
-                   套用
-                 </button>
+                   <button onClick={() => loadStats()} className="h-10 px-4 rounded bg-black text-white">
+                     套用
+                  </button>
                  <div className="flex gap-2 md:ml-auto">
-                   <button className="h-10 px-3 border rounded"
-                           onClick={()=>{setFromDate(ymdNDaysAgo(7)); setToDate(todayYMD());}}>
-                     近7天
-                   </button>
-                   <button className="h-10 px-3 border rounded"
-                           onClick={()=>{setFromDate(ymdNDaysAgo(30)); setToDate(todayYMD());}}>
-                     近30天
-                   </button>
-                   <button className="h-10 px-3 border rounded"
-                           onClick={()=>{setFromDate(ymdNDaysAgo(90)); setToDate(todayYMD());}}>
-                     近90天
-                   </button>
+<button
+  className="h-10 px-3 border rounded"
+  onClick={() => {
+    const f = ymdNDaysAgo(7); const t = todayYMD();
+    setFromDate(f); setToDate(t);
+    setTimeout(loadStats, 0);
+  }}
+>
+  近7天
+</button>
+<button
+  className="h-10 px-3 border rounded"
+  onClick={() => {
+    const f = ymdNDaysAgo(30); const t = todayYMD();
+    setFromDate(f); setToDate(t);
+    setTimeout(loadStats, 0);
+  }}
+>
+  近30天
+</button>
+<button
+  className="h-10 px-3 border rounded"
+  onClick={() => {
+    const f = ymdNDaysAgo(90); const t = todayYMD();
+    setFromDate(f); setToDate(t);
+    setTimeout(loadStats, 0);
+  }}
+>
+  近90天
+</button>
                  </div>
                </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -510,7 +560,7 @@ if (!res.ok) {
                 <div className="bg-white p-6 rounded-lg border">
                   <h3 className="text-lg font-semibold mb-4">開始吸菸年齡分布</h3>
                   <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={statistics.startSmokingStats}>
+                    <RechartsBarChart data={statistics.startSmokingPeriodStats ?? statistics.startSmokingStats}>
                       <RechartsCartesianGrid strokeDasharray="3 3" />
                       <RechartsXAxis dataKey="name" />
                       <RechartsYAxis />
@@ -526,7 +576,8 @@ if (!res.ok) {
                   <RechartsResponsiveContainer width="100%" height={300}>
                     <RechartsPieChart>
                       <RechartsPie
-                        data={statistics.frequencyStats}
+                        data={statistics.weeklyFrequencyStats ?? statistics.frequencyStats}
+
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -562,7 +613,7 @@ if (!res.ok) {
                 <div className="bg-white p-6 rounded-lg border">
                   <h3 className="text-lg font-semibold mb-4">吸菸原因統計</h3>
                   <RechartsResponsiveContainer width="100%" height={300}>
-                    <RechartsBarChart data={statistics.reasonsStats} layout="horizontal">
+                    <RechartsBarChart data={statistics.smokingReasonsStats ?? statistics.reasonsStats} layout="horizontal">
                       <RechartsCartesianGrid strokeDasharray="3 3" />
                       <RechartsXAxis type="number" />
                       <RechartsYAxis dataKey="name" type="category" width={60} />
@@ -578,7 +629,8 @@ if (!res.ok) {
                   <RechartsResponsiveContainer width="100%" height={300}>
                     <RechartsPieChart>
                       <RechartsPie
-                        data={statistics.tobaccoTypeStats}
+                        data={statistics.productTypesUsedStats ?? statistics.tobaccoTypeStats}
+
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -602,7 +654,8 @@ if (!res.ok) {
                   <RechartsResponsiveContainer width="100%" height={300}>
                     <RechartsPieChart>
                       <RechartsPie
-                        data={statistics.quitIntentionStats}
+                        data={statistics.wantQuitStats ?? statistics.quitIntentionStats}
+
                         cx="50%"
                         cy="50%"
                         labelLine={false}
