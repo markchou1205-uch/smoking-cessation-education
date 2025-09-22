@@ -1,4 +1,3 @@
-// pages/api/submissions.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
@@ -16,11 +15,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'POST') {
-      const body = req.body ? (typeof req.body === 'string' ? JSON.parse(req.body) : req.body) : {};
-      // TODO：依你的 schema 做驗證（zod/joi）
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body ?? {});
       const payload = {
-        title: body.title,
-        student_id: body.student_id,
+        title: body.title ?? null,
+        student_id: body.student_id ?? null,
         created_at: new Date().toISOString(),
         ...body,
       };
