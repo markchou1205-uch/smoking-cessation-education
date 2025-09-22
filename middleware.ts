@@ -1,30 +1,38 @@
-// middleware.ts - 中間件配置
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // 管理員路由保護
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
-    }
+  const { pathname } = request.nextUrl;
+
+  // 允許所有 API 路由和靜態資源通過
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
   }
 
-  // 安全標頭
-  const response = NextResponse.next()
-  
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  
-  return response
+  // 不對根路徑和其他一般頁面進行重新導向
+  if (pathname === '/' || !pathname.startsWith('/admin')) {
+    return NextResponse.next();
+  }
+
+  // 對於 /admin 路由，讓頁面自己處理認證邏輯
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/admin/:path*',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
-} 
+};
