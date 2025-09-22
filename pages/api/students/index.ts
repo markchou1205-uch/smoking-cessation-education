@@ -25,13 +25,19 @@ function normalizeClassName(cls: string): string {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === 'POST') {
-      // —— 新增一筆 submissions —— 
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-      const { student_id, title = '', score = null, data = {} } = body;
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      const d = typeof body.data === 'object' ? body.data : (()=>{ try { return JSON.parse(body.data) } catch { return {} } })();
 
-      if (!student_id) {
-        return res.status(400).json({ error: "Missing 'student_id' in body" });
-      }
+      // 接受多種鍵名做 fallback
+      const student_id =
+        body.student_id ?? body.studentId ?? d?.student_id ?? d?.studentId ?? d?.學號 ?? '';
+
+      const title = body.title ?? '';
+      const score = typeof body.score === 'number' ? body.score : null;
+      const data  = d && Object.keys(d).length ? d : {};
+
+      // 不再以缺少 student_id 當錯，直接寫入（你要強制必填再把這段打開）
+      // if (!student_id) return res.status(400).json({ error: "Missing 'student_id'" });
 
       const { data: inserted, error } = await supabaseAdmin
         .from('submissions')
