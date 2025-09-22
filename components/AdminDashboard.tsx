@@ -64,6 +64,22 @@ interface Statistics {
   instructorStats: { name: string; value: number }[];
   classStats: { name: string; value: number }[];
 }
+// ---- Date helpers (module-level; hoisted) ----
+function pad(n: number) { return String(n).padStart(2, '0'); }
+
+function todayYMD() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function ymdNDaysAgo(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - (n - 1));
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function startOfDay(ymd: string) { return new Date(`${ymd}T00:00:00`); }
+function endOfDay(ymd: string)   { return new Date(`${ymd}T23:59:59.999`); }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
@@ -83,27 +99,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
      for (const v of arr) if (v) map.set(v, (map.get(v)||0)+1);
      return Array.from(map.entries()).map(([name,value])=>({name, value}));
    };
-  // === 日期工具 ===
-const pad = (n: number) => String(n).padStart(2, "0");
-const todayYMD = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-const ymdNDaysAgo = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() - (n - 1));
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
-const startOfDay = (ymd: string) => new Date(`${ymd}T00:00:00`);
-const endOfDay   = (ymd: string) => new Date(`${ymd}T23:59:59.999`);
-
    // 由學生紀錄「依日期區間」計算統計
    const computeStatistics = (records: StudentRecord[]): Statistics => {
      const from = startOfDay(fromDate).getTime();
      const to   = endOfDay(toDate).getTime();
      const inRange = records.filter(r=>{
-       const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
-       return Number.isFinite(t) && t >= from && t <= to;
+     const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+     return Number.isFinite(t) && t >= from && t <= to;
      });
      const totalStudents = inRange.length;
      const completedStudents = inRange.filter(r=>r.status==='completed').length;
