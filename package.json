@@ -1,41 +1,44 @@
 {
   "name": "smoking-cessation-education",
   "version": "1.0.0",
-  "private": true,
+  "description": "健行科技大學戒菸教育系統",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:test": "node scripts/test-db.js",
+    "db:init": "node scripts/init-db.js",
+    "db:seed": "node scripts/seed-db.js"
   },
   "dependencies": {
-    "next": "14.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "lucide-react": "^0.292.0",
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "pg": "^8.11.3",
     "recharts": "^2.8.0",
+    "lucide-react": "^0.263.1",
     "jspdf": "^2.5.1",
     "html2canvas": "^1.4.1"
   },
   "devDependencies": {
-    "typescript": "^5.2.2",
-    "@types/node": "^20.8.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@tailwindcss/forms": "^0.5.6",
-    "autoprefixer": "^10.4.16",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@types/pg": "^8.10.7",
+    "typescript": "^5.0.0",
+    "tailwindcss": "^3.3.0",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
-    "eslint": "^8.52.0",
-    "eslint-config-next": "14.0.0"
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0"
   },
-  "description": "健行科技大學戒菸教育系統",
   "keywords": [
-    "smoking-cessation",
     "education",
-    "nextjs",
-    "typescript",
-    "taiwan"
+    "smoking-cessation",
+    "next.js",
+    "react",
+    "typescript"
   ],
   "author": "健行科技大學",
   "license": "MIT"
