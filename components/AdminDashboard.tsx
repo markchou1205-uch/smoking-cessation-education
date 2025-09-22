@@ -118,7 +118,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
      const quitIntentionStats = tally(inRange.map(r=>r.quitIntention));
      const instructorStats    = tally(inRange.map(r=>r.instructor));
      // 班級可依你現有顯示邏輯截取到「xx系」
-     const classStats         = tally(inRange.map(r=> r.class ? (r.class.split('系')[0]   '系') : r.class));
+     const classStats         = tally(inRange.map(r=> r.class ? (r.class.split('系')[0]+'系') : r.class));
      // 多選「原因」需要攤平
      const reasonsStatsMap = new Map<string, number>();
      for (const r of inRange) {
@@ -184,7 +184,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   // 獲取唯一的班級和教官列表
   const uniqueClasses = Array.from(new Set(
     studentRecords
-      .map(r => r.class?.split('系')[0]   '系')
+      .map(r => r.class?.split('系')[0]+'系')
       .filter(Boolean)
   ));
   
