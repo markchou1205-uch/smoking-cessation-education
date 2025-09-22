@@ -1,6 +1,6 @@
 // pages/api/students/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { supabaseAdmin } from '../../../../lib/supabaseAdmin'; // 依你的專案層級，這是從 pages/api/students/index.ts 回到 /lib
 
 function parseData(d: any) {
   if (!d) return {};
@@ -24,6 +24,26 @@ function normalizeClassName(cls: string): string {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    if (req.method === 'POST') {
+      // —— 新增一筆 submissions —— 
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+      const { student_id, title = '', score = null, data = {} } = body;
+
+      if (!student_id) {
+        return res.status(400).json({ error: "Missing 'student_id' in body" });
+      }
+
+      const { data: inserted, error } = await supabaseAdmin
+        .from('submissions')
+        .insert([{ student_id, title, score, data }])
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return res.status(201).json({ ok: true, item: inserted });
+    }
+
+    // —— 讀取列表（GET）——
     const { from, to } = req.query as { from?: string; to?: string };
 
     let q = supabaseAdmin
@@ -64,8 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       };
     });
 
-    res.status(200).json({ data: list });
+    return res.status(200).json({ data: list });
   } catch (e: any) {
-    res.status(500).json({ error: e?.message ?? 'Internal Error' });
+    return res.status(500).json({ error: e?.message ?? 'Internal Error' });
   }
 }
