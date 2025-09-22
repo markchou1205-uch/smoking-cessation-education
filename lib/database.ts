@@ -1,13 +1,25 @@
 // lib/database.ts
 import { Pool, PoolConfig, Client } from 'pg';
 
+// 處理 SSL 配置
+const getSSLConfig = () => {
+  if (process.env.NODE_ENV === 'production') {
+    // 生產環境 SSL 配置
+    return {
+      rejectUnauthorized: false, // 允許自簽名證書
+      sslmode: 'require'
+    };
+  }
+  return false; // 開發環境不使用 SSL
+};
+
 // 資料庫連接配置
 const dbConfig: PoolConfig = {
   connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: getSSLConfig(),
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // 增加連接超時時間
 };
 
 // 建立連接池
@@ -33,6 +45,13 @@ export const testDatabaseConnection = async (): Promise<{
   details?: any;
 }> => {
   try {
+    console.log('開始測試資料庫連接...');
+    console.log('連接配置:', {
+      hasConnectionString: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL),
+      nodeEnv: process.env.NODE_ENV,
+      sslConfig: getSSLConfig()
+    });
+
     const pool = getPool();
     
     // 測試基本連接
@@ -52,14 +71,21 @@ export const testDatabaseConnection = async (): Promise<{
       
       const tables = tablesResult.rows.map(row => row.table_name);
       
+      console.log('資料庫連接成功，發現表格:', tables);
+      
       return {
         success: true,
         message: '資料庫連接成功',
         details: {
           currentTime: result.rows[0].current_time,
-          version: result.rows[0].version,
+          version: result.rows[0].version.substring(0, 50) + '...', // 截短版本信息
           availableTables: tables,
-          totalTables: tables.length
+          totalTables: tables.length,
+          connectionConfig: {
+            hasConnectionString: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL),
+            nodeEnv: process.env.NODE_ENV,
+            sslEnabled: !!getSSLConfig()
+          }
         }
       };
     } finally {
@@ -67,14 +93,32 @@ export const testDatabaseConnection = async (): Promise<{
     }
   } catch (error) {
     console.error('資料庫連接測試失敗:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    let troubleshootingTips = [];
+    
+    // 根據錯誤類型提供解決建議
+    if (errorMessage.includes('self-signed certificate')) {
+      troubleshootingTips.push('SSL 證書問題 - 已嘗試允許自簽名證書');
+      troubleshootingTips.push('請確認資料庫提供商的 SSL 設定');
+    } else if (errorMessage.includes('connection refused')) {
+      troubleshootingTips.push('連接被拒絕 - 請檢查資料庫是否運行中');
+    } else if (errorMessage.includes('timeout')) {
+      troubleshootingTips.push('連接超時 - 請檢查網路連接');
+    } else if (errorMessage.includes('authentication failed')) {
+      troubleshootingTips.push('認證失敗 - 請檢查用戶名和密碼');
+    }
+    
     return {
       success: false,
-      message: `資料庫連接失敗: ${error instanceof Error ? error.message : '未知錯誤'}`,
+      message: `資料庫連接失敗: ${errorMessage}`,
       details: {
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
+        troubleshooting: troubleshootingTips,
         config: {
-          hasConnectionString: !!process.env.DATABASE_URL || !!process.env.POSTGRES_URL,
-          nodeEnv: process.env.NODE_ENV
+          hasConnectionString: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL),
+          nodeEnv: process.env.NODE_ENV,
+          sslConfig: getSSLConfig()
         }
       }
     };
