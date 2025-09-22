@@ -1,6 +1,6 @@
 // pages/api/students/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../../lib/supabaseAdmin';
+import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
 function parseData(d: any) {
   if (!d) return {};
