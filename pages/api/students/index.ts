@@ -1,6 +1,6 @@
 // pages/api/student/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabaseAdmin'; // 如果你有 @ 別名，改成 '@/lib/supabaseAdmin'
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 function parseData(d: any) {
   if (!d) return {};
