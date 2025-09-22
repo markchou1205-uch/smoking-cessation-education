@@ -1,7 +1,7 @@
 // pages/admin/database-test.tsx
 import React, { useState } from 'react';
 import { 
-  Database, 
+  Database as DatabaseIcon, 
   CheckCircle, 
   XCircle, 
   RefreshCw, 
@@ -160,7 +160,7 @@ const DatabaseTest: React.FC = () => {
               disabled={loading === 'connection'}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              <Database className="h-4 w-4 mr-2" />
+              <DatabaseIcon className="h-4 w-4 mr-2" />
               測試連接
             </button>
             
