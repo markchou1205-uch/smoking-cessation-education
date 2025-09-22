@@ -67,8 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       r.startSmoking, r.frequency, r.dailyAmount, r.tobaccoType, r.quitIntention, r.reasons, r.created_at
     ].map(csvEscape).join(','));
 
-    const csv = '\uFEFF' + [header.map(csvEscape).join(','), ...lines].join('\n'); // 加 BOM 給 Excel
-
+    const csv = '\uFEFF' + [header.map(csvEscape).join(','), ...lines].join('\n'); // BOM for Excel
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=students_${new Date().toISOString().slice(0,10)}.csv`);
     res.status(200).send(csv);
