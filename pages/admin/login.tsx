@@ -143,12 +143,12 @@ const AdminLogin: React.FC = () => {
               {loginError}
               {loginError.includes('已經登入') && (
                 <div className="mt-2">
-                  <a 
-                    href="/admin"
-                    className="inline-block px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                  <button 
+                    onClick={() => window.location.href = '/admin'}
+                    className="inline-block px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 cursor-pointer"
                   >
                     前往儀表板
-                  </a>
+                  </button>
                 </div>
               )}
             </div>
