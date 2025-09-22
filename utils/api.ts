@@ -1,16 +1,10 @@
-export async function createSubmission(payload: any) {
-  const res = await fetch('/api/submissions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error('Create failed');
-  return res.json(); // { item }
-}
-
-export async function fetchSubmissions() {
-  const res = await fetch('/api/submissions', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Fetch failed');
-  return res.json(); // { items }
+export async function fetchAnalytics(params?: { from?: string; to?: string; tzOffset?: number }) {
+  const q = new URLSearchParams();
+  if (params?.from) q.set('from', params.from);
+  if (params?.to) q.set('to', params.to);
+  if (typeof params?.tzOffset === 'number') q.set('tzOffset', String(params.tzOffset));
+  const res = await fetch(`/api/analytics${q.toString() ? `?${q}` : ''}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Fetch analytics failed');
+  return res.json();
 }
 
