@@ -211,7 +211,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob(['\uFEFF'   csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF'+ csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `戒菸教育記錄_${new Date().toISOString().split('T')[0]}.csv`;
