@@ -142,40 +142,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
      };
    };
 
-  // 載入資料
-  const loadData = async () => {
-    setLoading(true);
-    try {
-const recordsResponse = await fetch('/api/submissions', { cache: 'no-store' });
-if (recordsResponse.ok) {
-  const data = await recordsResponse.json();
-  const list: StudentRecord[] = (data.items || []).map((d: any) => ({
-    // 對齊你原本 StudentRecord 需要的欄位；沒有的先給空值
-    id: d.id,
-    student_id: d.student_id ?? '',
-    createdAt: d.created_at,            // 之後統計會用到
-    status: d.status ?? 'completed',    // 先當完成（你可改成真實狀態欄位）
-    startSmoking: d.startSmoking ?? d.start_smoking ?? '',
-    frequency: d.frequency ?? '',
-    dailyAmount: d.dailyAmount ?? d.daily_amount ?? '',
-    reasons: Array.isArray(d.reasons) ? d.reasons : (d.reasons ? String(d.reasons).split(',') : []),
-    tobaccoType: d.tobaccoType ?? d.tobacco_type ?? '',
-    quitIntention: d.quitIntention ?? d.quit_intention ?? '',
-    instructor: d.instructor ?? '',
-    class: d.class ?? '',
-  }));
-  setStudentRecords(list);
-  setStatistics(computeStatistics(list));
+// "use client";
+
+async function loadData() {
+  setLoading(true);
+  setErr?.(null); // 如果有錯誤狀態就清一下（沒有這個 state 可刪這行）
+  try {
+    // 如果你頁面有日期區間（fromDate / toDate），一起帶上；沒有就保留基礎版
+    const u = new URL('/api/student', window.location.origin); // 等同 /api/students
+    if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
+    if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
+
+    const res = await fetch(u.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('fetch /api/student failed');
+
+    const { data } = await res.json(); // 後端已把 submissions 轉成前端要的 StudentRecord 形狀
+    setStudentRecords(data || []);
+
+    // 若你的儀表板統計是前端計算，這裡直接重算一次
+    if (typeof computeStatistics === 'function') {
+      setStatistics(computeStatistics(data || []));
+    }
+
+    setLastUpdated?.(new Date());
+  } catch (e: any) {
+    console.error(e);
+    // 若有錯誤狀態就顯示（沒有這個 state 可改成 alert）
+    setErr?.(e?.message ?? '載入失敗');
+  } finally {
+    setLoading(false);
+  }
 }
 
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('載入資料錯誤:', error);
-      alert('載入資料失敗，請稍後再試');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 初始載入
   useEffect(() => {
@@ -215,24 +213,11 @@ if (recordsResponse.ok) {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   const exportToCSV = () => {
-    const csvContent = [
-      ['姓名', '班級', '學號', '手機', '輔導教官', '建立日期', '狀態'].join(','),
-      ...filteredRecords.map(record => [
-        record.name || '',
-        record.class || '',
-        record.studentId || '',
-        record.phone || '',
-        record.instructor || '',
-        record.createdAt ? new Date(record.createdAt).toLocaleDateString() : '',
-        record.status === 'completed' ? '已完成' : '進行中'
-      ].join(','))
-    ].join('\n');
-
-    const blob = new Blob(['\uFEFF'+ csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `戒菸教育記錄_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+  const u = new URL('/api/students/export', window.location.origin);
+  // 若頁面上有日期區間，就一起帶上；沒有這兩個 state 就刪掉這兩行
+  if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
+  if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
+  window.location.href = u.toString(); // 觸發下載
   };
 
   if (loading) {
