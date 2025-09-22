@@ -2,76 +2,60 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabaseAdmin } from '../../../lib/supabaseAdmin';
 
-function parseData(d: any) {
-  if (!d) return {};
-  if (typeof d === 'object') return d;
-  try { return JSON.parse(String(d)); } catch { return {}; }
-}
-function pick<T = any>(obj: any, keys: string[], fallback: any = ''): T {
-  for (const k of keys) { const v = obj?.[k]; if (v !== undefined && v !== null && v !== '') return v; }
-  return fallback;
-}
-function toArrayMaybe(v: any): string[] {
-  if (!v) return [];
-  if (Array.isArray(v)) return v.filter(Boolean).map(String);
-  return String(v).split(/[,，;；、\s]+/).filter(Boolean);
-}
-function csvEscape(s: any) {
-  const t = s === null || s === undefined ? '' : String(s);
-  if (/[,"\n]/.test(t)) return `"${t.replace(/"/g, '""')}"`;
-  return t;
-}
+function parseObj(v:any){ if(!v)return{}; if(typeof v==='object')return v; try{return JSON.parse(String(v))}catch{return{}} }
+function arr(v:any){ if(!v)return[]; return Array.isArray(v)?v:v.toString().split(/[,，;；、\s]+/).filter(Boolean); }
+function yesno(v:any){ if(v===true||String(v).trim()==='有'||String(v).trim()==='是') return '有'; if(v===false||String(v).trim()==='沒有'||String(v).trim()==='否') return '沒有'; return ''; }
+function esc(s:any){ const t=s==null?'':String(s); return /[,"\n]/.test(t)?`"${t.replace(/"/g,'""')}"`:t; }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { from, to } = req.query as { from?: string; to?: string };
-
-    let q = supabaseAdmin
-      .from('submissions')
-      .select('id, student_id, title, score, data, created_at')
-      .order('created_at', { ascending: false });
-
+    let q = supabaseAdmin.from('submissions').select('id, student_id, data, created_at').order('created_at', { ascending:false });
     if (from) q = q.gte('created_at', new Date(`${from}T00:00:00`).toISOString());
     if (to)   q = q.lte('created_at', new Date(`${to}T23:59:59.999`).toISOString());
-
     const { data, error } = await q;
     if (error) throw error;
 
-    const rows = (data ?? []).map((row: any) => {
-      const d = parseData(row.data);
+    const rows = (data ?? []).map((r:any) => {
+      const d = parseObj(r.data);
       return {
-        id: row.id,
-        student_id: row.student_id ?? '',
-        name:        pick<string>({ ...row, ...d }, ['name', 'studentName', '姓名']),
-        department:  pick<string>({ ...row, ...d }, ['department', '科系', 'dept']),
-        class:       pick<string>({ ...row, ...d }, ['class', '班級', 'className']),
-        phone:       pick<string>({ ...row, ...d }, ['phone', 'mobile', '手機', 'phoneNumber']),
-        instructor:  pick<string>({ ...row, ...d }, ['instructor', '輔導教官']),
-        status:      pick<string>({ ...row, ...d }, ['status'], 'completed'),
-        startSmoking:  pick<string>({ ...row, ...d }, ['startSmoking', 'start_smoking']),
-        frequency:     pick<string>({ ...row, ...d }, ['frequency']),
-        dailyAmount:   pick<string>({ ...row, ...d }, ['dailyAmount', 'daily_amount']),
-        tobaccoType:   pick<string>({ ...row, ...d }, ['tobaccoType', 'tobacco_type']),
-        quitIntention: pick<string>({ ...row, ...d }, ['quitIntention', 'quit_intention']),
-        reasons:       toArrayMaybe(pick<string | string[]>({ ...row, ...d }, ['reasons'])).join('、'),
-        created_at: row.created_at
+        id: r.id, student_id: r.student_id ?? '', created_at: r.created_at,
+        姓名: d.name ?? '', 科系: d.department ?? '', 班級: d.class ?? '', 手機: d.phone ?? '', 輔導教官: d.instructor ?? '',
+        你從什麼時候開始吸菸: d.startSmokingPeriod ?? '',
+        你一週抽幾次: d.weeklyFrequency ?? '',
+        你一天吸菸幾支: d.dailyAmount ?? '',
+        你平常吸菸的原因: arr(d.smokingReasons).join('、'),
+        你是使用哪種菸品:  arr(d.productTypesUsed).join('、'),
+        你家中有人吸菸嗎: yesno(d.familySmoker),
+        你知道校園全面禁止吸菸嗎: yesno(d.knowSchoolBan),
+        你有在學校看過菸商廣告嗎: yesno(d.seenTobaccoAds),
+        你有曾抽過電子煙嗎: yesno(d.everVaped),
+        你現在有沒有戒菸的想法: yesno(d.wantQuit),
+        你現在有沒有戒菸的需求: yesno(d.wantsCounseling),
+        政府免費戒菸輔導是否有興趣: yesno(d.interestedInFreeSvc),
       };
     });
 
     const header = [
-      'ID','學號','姓名','科系','班級','手機','輔導教官','狀態',
-      '開始吸菸年齡','吸菸頻率','每日支數','菸品種類','戒菸意圖','戒菸原因','建立時間'
+      'ID','學號','建立時間','姓名','科系','班級','手機','輔導教官',
+      '你從什麼時候開始吸菸','你一週抽幾次','你一天吸菸幾支',
+      '你平常吸菸的原因','你是使用哪種菸品',
+      '你家中有人吸菸嗎','你知道校園全面禁止吸菸嗎','你有在學校看過菸商廣告嗎',
+      '你有曾抽過電子煙嗎','你現在有沒有戒菸的想法','你現在有沒有戒菸的需求','政府免費戒菸輔導是否有興趣'
     ];
     const lines = rows.map(r => [
-      r.id, r.student_id, r.name, r.department, r.class, r.phone, r.instructor, r.status,
-      r.startSmoking, r.frequency, r.dailyAmount, r.tobaccoType, r.quitIntention, r.reasons, r.created_at
-    ].map(csvEscape).join(','));
+      r.id, r.student_id, r.created_at, r.姓名, r.科系, r.班級, r.手機, r.輔導教官,
+      r['你從什麼時候開始吸菸'], r['你一週抽幾次'], r['你一天吸菸幾支'],
+      r['你平常吸菸的原因'], r['你是使用哪種菸品'],
+      r['你家中有人吸菸嗎'], r['你知道校園全面禁止吸菸嗎'], r['你有在學校看過菸商廣告嗎'],
+      r['你有曾抽過電子煙嗎'], r['你現在有沒有戒菸的想法'], r['你現在有沒有戒菸的需求'], r['政府免費戒菸輔導是否有興趣']
+    ].map(esc).join(','));
 
-    const csv = '\uFEFF' + [header.map(csvEscape).join(','), ...lines].join('\n'); // BOM for Excel
+    const csv = '\uFEFF' + [header.map(esc).join(','), ...lines].join('\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename=students_${new Date().toISOString().slice(0,10)}.csv`);
     res.status(200).send(csv);
-  } catch (e: any) {
+  } catch (e:any) {
     res.status(500).json({ error: e?.message ?? 'Internal Error' });
   }
 }
