@@ -74,26 +74,63 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const [selectedInstructor, setSelectedInstructor] = useState('all');
   const [activeTab, setActiveTab] = useState<'records' | 'statistics'>('records');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+   // 小工具：把陣列依 key 彙整計數
+   const tally = (arr: (string|undefined|null)[])=>{
+     const map = new Map<string, number>();
+     for (const v of arr) if (v) map.set(v, (map.get(v)||0)+1);
+     return Array.from(map.entries()).map(([name,value])=>({name, value}));
+   };
+   // 由學生紀錄「依日期區間」計算統計
+   const computeStatistics = (records: StudentRecord[]): Statistics => {
+     const from = startOfDay(fromDate).getTime();
+     const to   = endOfDay(toDate).getTime();
+     const inRange = records.filter(r=>{
+       const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+       return Number.isFinite(t) && t >= from && t <= to;
+     });
+     const totalStudents = inRange.length;
+     const completedStudents = inRange.filter(r=>r.status==='completed').length;
+     const completionRate = totalStudents ? Math.round((completedStudents/totalStudents)*100) : 0;
+     // 單值欄位直接彙整
+     const startSmokingStats  = tally(inRange.map(r=>r.startSmoking));
+     const frequencyStats     = tally(inRange.map(r=>r.frequency));
+     const dailyAmountStats   = tally(inRange.map(r=>r.dailyAmount));
+     const tobaccoTypeStats   = tally(inRange.map(r=>r.tobaccoType));
+     const quitIntentionStats = tally(inRange.map(r=>r.quitIntention));
+     const instructorStats    = tally(inRange.map(r=>r.instructor));
+     // 班級可依你現有顯示邏輯截取到「xx系」
+     const classStats         = tally(inRange.map(r=> r.class ? (r.class.split('系')[0]   '系') : r.class));
+     // 多選「原因」需要攤平
+     const reasonsStatsMap = new Map<string, number>();
+     for (const r of inRange) {
+       if (Array.isArray(r.reasons)) {
+         for (const reason of r.reasons) {
+           if (!reason) continue;
+           reasonsStatsMap.set(reason, (reasonsStatsMap.get(reason)||0)+1);
+         }
+       }
+     }
+     const reasonsStats = Array.from(reasonsStatsMap.entries()).map(([name,value])=>({name,value}));
+     return {
+       totalStudents, completedStudents, completionRate,
+       startSmokingStats, frequencyStats, dailyAmountStats, reasonsStats,
+       tobaccoTypeStats, quitIntentionStats, instructorStats, classStats
+     };
+   };
 
   // 載入資料
   const loadData = async () => {
     setLoading(true);
     try {
-      // 同時獲取學生記錄和統計數據
-      const [recordsResponse, statsResponse] = await Promise.all([
-        fetch('/api/students'),
-        fetch('/api/admin/statistics')
-      ]);
-
-      if (recordsResponse.ok) {
-        const recordsData = await recordsResponse.json();
-        setStudentRecords(recordsData.data || []);
-      }
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setStatistics(statsData.data);
-      }
+       const recordsResponse = await fetch('/api/students');
+       if (recordsResponse.ok) {
+         const recordsData = await recordsResponse.json();
+         const list: StudentRecord[] = recordsData.data || [];
+         setStudentRecords(list);
+         // 以目前的日期區間計算真統計
+         setStatistics(computeStatistics(list));
+       }
+ 
 
       setLastUpdated(new Date());
     } catch (error) {
@@ -108,7 +145,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   useEffect(() => {
     loadData();
   }, []);
-
+   // 日期區間或原始資料變更 → 重新計算統計
+   useEffect(() => {
+     if (studentRecords.length) {
+       setStatistics(computeStatistics(studentRecords));
+     }
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [fromDate, toDate, studentRecords]);
   // 過濾學生記錄
   const filteredRecords = studentRecords.filter(record => {
     const matchesSearch = record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,7 +165,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   // 獲取唯一的班級和教官列表
   const uniqueClasses = Array.from(new Set(
     studentRecords
-      .map(r => r.class?.split('系')[0] + '系')
+      .map(r => r.class?.split('系')[0]   '系')
       .filter(Boolean)
   ));
   
@@ -149,7 +192,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF'   csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `戒菸教育記錄_${new Date().toISOString().split('T')[0]}.csv`;
@@ -407,6 +450,40 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
           {/* 統計分析頁籤 */}
           {activeTab === 'statistics' && statistics && (
             <div className="p-6">
+                             {/* 新增：區間選擇器 */}
+               <div className="flex flex-col md:flex-row md:items-end gap-3 mb-6">
+                 <div>
+                   <label className="block text-sm mb-1">起始日期</label>
+                   <input type="date" value={fromDate} max={toDate}
+                          onChange={(e)=>setFromDate(e.target.value)}
+                          className="border rounded px-3 py-2"/>
+                 </div>
+                 <div>
+                   <label className="block text-sm mb-1">結束日期</label>
+                   <input type="date" value={toDate}
+                          min={fromDate} max={todayYMD()}
+                          onChange={(e)=>setToDate(e.target.value)}
+                          className="border rounded px-3 py-2"/>
+                 </div>
+                 <button onClick={()=>setStatistics(computeStatistics(studentRecords))}
+                         className="h-10 px-4 rounded bg-black text-white">
+                   套用
+                 </button>
+                 <div className="flex gap-2 md:ml-auto">
+                   <button className="h-10 px-3 border rounded"
+                           onClick={()=>{setFromDate(ymdNDaysAgo(7)); setToDate(todayYMD());}}>
+                     近7天
+                   </button>
+                   <button className="h-10 px-3 border rounded"
+                           onClick={()=>{setFromDate(ymdNDaysAgo(30)); setToDate(todayYMD());}}>
+                     近30天
+                   </button>
+                   <button className="h-10 px-3 border rounded"
+                           onClick={()=>{setFromDate(ymdNDaysAgo(90)); setToDate(todayYMD());}}>
+                     近90天
+                   </button>
+                 </div>
+               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* 開始吸菸年齡統計 */}
                 <div className="bg-white p-6 rounded-lg border">
