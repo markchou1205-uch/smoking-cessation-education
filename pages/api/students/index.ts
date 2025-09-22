@@ -1,6 +1,6 @@
 // pages/api/student/index.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabaseAdmin'; // 若你有 @ 別名就改成 '@/lib/supabaseAdmin'
+import { supabaseAdmin } from '../../../lib/supabaseAdmin'; // 如果你有 @ 別名，改成 '@/lib/supabaseAdmin'
 
 function parseData(d: any) {
   if (!d) return {};
@@ -69,4 +69,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ error: e?.message ?? 'Internal Error' });
   }
 }
-export { default } from '../student';
