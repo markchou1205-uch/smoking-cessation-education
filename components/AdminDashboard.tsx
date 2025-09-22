@@ -148,14 +148,14 @@ async function loadData() {
   setLoading(true);
   try {
     // 如果你頁面有日期區間（fromDate / toDate），一起帶上；沒有就保留基礎版
-    const u = new URL('/api/student', window.location.origin); // 等同 /api/students
+    const u = new URL('/api/students', window.location.origin); // 等同 /api/students
     if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
     if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
 
 const res = await fetch(u.toString(), { cache: 'no-store' });
 if (!res.ok) {
   const text = await res.text();
-  throw new Error(`fetch /api/student failed: ${res.status} ${text}`);
+  throw new Error(`fetch /api/students failed: ${res.status} ${text}`);
 }
 
     const { data } = await res.json(); // 後端已把 submissions 轉成前端要的 StudentRecord 形狀
