@@ -1,5 +1,5 @@
 // lib/database.ts
-import { Pool, PoolConfig } from 'pg';
+import { Pool, PoolConfig, Client } from 'pg';
 
 // 資料庫連接配置
 const dbConfig: PoolConfig = {
