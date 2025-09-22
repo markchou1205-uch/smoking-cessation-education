@@ -104,7 +104,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
      const from = startOfDay(fromDate).getTime();
      const to   = endOfDay(toDate).getTime();
      const inRange = records.filter(r=>{
-     const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+     const t = r.createdAt
+  ? new Date(r.createdAt).getTime()
+  : (r as any).created_at
+    ? new Date((r as any).created_at).getTime()
+    : NaN;
+
      return Number.isFinite(t) && t >= from && t <= to;
      });
      const totalStudents = inRange.length;
@@ -141,15 +146,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-       const recordsResponse = await fetch('/api/students');
-       if (recordsResponse.ok) {
-         const recordsData = await recordsResponse.json();
-         const list: StudentRecord[] = recordsData.data || [];
-         setStudentRecords(list);
-         // 以目前的日期區間計算真統計
-         setStatistics(computeStatistics(list));
-       }
- 
+const recordsResponse = await fetch('/api/submissions', { cache: 'no-store' });
+if (recordsResponse.ok) {
+  const data = await recordsResponse.json();
+  const list: StudentRecord[] = (data.items || []).map((d: any) => ({
+    // 對齊你原本 StudentRecord 需要的欄位；沒有的先給空值
+    id: d.id,
+    student_id: d.student_id ?? '',
+    createdAt: d.created_at,            // 之後統計會用到
+    status: d.status ?? 'completed',    // 先當完成（你可改成真實狀態欄位）
+    startSmoking: d.startSmoking ?? d.start_smoking ?? '',
+    frequency: d.frequency ?? '',
+    dailyAmount: d.dailyAmount ?? d.daily_amount ?? '',
+    reasons: Array.isArray(d.reasons) ? d.reasons : (d.reasons ? String(d.reasons).split(',') : []),
+    tobaccoType: d.tobaccoType ?? d.tobacco_type ?? '',
+    quitIntention: d.quitIntention ?? d.quit_intention ?? '',
+    instructor: d.instructor ?? '',
+    class: d.class ?? '',
+  }));
+  setStudentRecords(list);
+  setStatistics(computeStatistics(list));
+}
 
       setLastUpdated(new Date());
     } catch (error) {
