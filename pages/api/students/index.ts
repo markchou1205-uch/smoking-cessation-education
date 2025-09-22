@@ -1,188 +1,87 @@
-// pages/api/students/index.ts
-import { NextApiRequest, NextApiResponse } from 'next';
+// pages/api/students.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabaseAdmin } from '../../lib/supabaseAdmin';
 
-// 模擬資料庫（實際應用中應該使用真實資料庫）
-let studentsData: any[] = [];
+// 解析 data 欄（jsonb 或字串）
+function parseData(d: any) {
+  if (!d) return {};
+  if (typeof d === 'object') return d;
+  try { return JSON.parse(String(d)); } catch { return {}; }
+}
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const { method } = req;
+function pick<T = any>(obj: any, keys: string[], fallback: any = ''): T {
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v !== undefined && v !== null && v !== '') return v;
+  }
+  return fallback;
+}
 
-  switch (method) {
-    case 'GET':
-      try {
-        res.status(200).json({
-          success: true,
-          data: studentsData
-        });
-      } catch (error) {
-        console.error('取得資料錯誤:', error);
-        res.status(500).json({
-          success: false,
-          error: '取得資料失敗'
-        });
-      }
-      break;
+function toArrayMaybe(v: any): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.filter(Boolean).map(String);
+  return String(v).split(/[,，;；、\s]+/).filter(Boolean);
+}
 
-    case 'POST':
-      try {
-        const studentData = req.body;
+function normalizeClassName(cls: string): string {
+  if (!cls) return '';
+  const i = cls.indexOf('系');
+  return i >= 0 ? cls.slice(0, i + 1) : cls;
+}
 
-        // 驗證必填欄位
-        if (!studentData.name || !studentData.studentId || !studentData.phone || !studentData.class) {
-          return res.status(400).json({
-            success: false,
-            error: '請填寫所有必填欄位'
-          });
-        }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    // 可選：日期區間過濾（YYYY-MM-DD），前端若沒帶就全撈
+    const { from, to } = req.query as { from?: string; to?: string };
 
-        // 驗證手機格式
-        const phoneRegex = /^\d{10}$/;
-        if (!phoneRegex.test(studentData.phone)) {
-          return res.status(400).json({
-            success: false,
-            error: '手機號碼格式錯誤，必須為10碼數字'
-          });
-        }
+    let q = supabaseAdmin
+      .from('submissions')
+      .select('id, student_id, title, score, data, created_at')
+      .order('created_at', { ascending: false });
 
-        // 驗證學號格式
-        const studentIdRegex = /^[A-Za-z]\d{8}$/;
-        if (!studentIdRegex.test(studentData.studentId)) {
-          return res.status(400).json({
-            success: false,
-            error: '學號格式錯誤，必須為第1碼英文字母加8碼數字'
-          });
-        }
+    if (from) q = q.gte('created_at', new Date(`${from}T00:00:00`).toISOString());
+    if (to)   q = q.lte('created_at', new Date(`${to}T23:59:59.999`).toISOString());
 
-        // 檢查學號是否已存在
-        const existingStudent = studentsData.find(s => s.studentId === studentData.studentId);
-        if (existingStudent) {
-          return res.status(400).json({
-            success: false,
-            error: '學號已存在'
-          });
-        }
+    const { data, error } = await q;
+    if (error) throw error;
 
-        // 添加 ID 和時間戳
-        const newStudent = {
-          id: Date.now().toString(),
-          ...studentData,
-          status: 'in_progress', // 預設狀態
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+    const list = (data ?? []).map((row: any) => {
+      const d = parseData(row.data);
+      // 盡量從多個可能鍵名取得資料，避免你前面表單鍵名不一致
+      const name        = pick<string>({ ...row, ...d }, ['name', 'studentName', '姓名']);
+      const department  = pick<string>({ ...row, ...d }, ['department', '科系', 'dept']);
+      const className   = normalizeClassName(pick<string>({ ...row, ...d }, ['class', '班級', 'className']));
+      const phone       = pick<string>({ ...row, ...d }, ['phone', 'mobile', '手機', 'phoneNumber']);
+      const instructor  = pick<string>({ ...row, ...d }, ['instructor', '輔導教官', 'instructorName']);
+      const status      = pick<string>({ ...row, ...d }, ['status'], 'completed');
 
-        // 儲存到模擬資料庫
-        studentsData.push(newStudent);
+      const startSmoking  = pick<string>({ ...row, ...d }, ['startSmoking', 'start_smoking', '開始吸菸年齡']);
+      const frequency     = pick<string>({ ...row, ...d }, ['frequency', '吸菸頻率']);
+      const dailyAmount   = pick<string>({ ...row, ...d }, ['dailyAmount', 'daily_amount', '每日支數']);
+      const tobaccoType   = pick<string>({ ...row, ...d }, ['tobaccoType', 'tobacco_type', '菸品種類']);
+      const quitIntention = pick<string>({ ...row, ...d }, ['quitIntention', 'quit_intention', '戒菸意圖']);
+      const reasons       = toArrayMaybe(pick<string | string[]>({ ...row, ...d }, ['reasons', '戒菸原因']));
 
-        console.log('新學生資料已添加:', newStudent);
+      return {
+        id: row.id,
+        student_id: row.student_id ?? '',
+        name,
+        department,
+        class: className,
+        phone,
+        instructor,
+        status,
+        createdAt: row.created_at,
+        // 供統計第二頁使用的欄位
+        startSmoking, frequency, dailyAmount, tobaccoType, quitIntention, reasons,
+        // 你原本就有的欄位（保留）
+        title: row.title ?? '',
+        score: typeof row.score === 'number' ? row.score : null,
+      };
+    });
 
-        res.status(201).json({
-          success: true,
-          message: '資料提交成功',
-          data: newStudent
-        });
-      } catch (error) {
-        console.error('API錯誤:', error);
-        res.status(500).json({
-          success: false,
-          error: '伺服器錯誤'
-        });
-      }
-      break;
-
-    case 'PUT':
-      try {
-        const { id, ...updateData } = req.body;
-        
-        if (!id) {
-          return res.status(400).json({
-            success: false,
-            error: '缺少學生ID'
-          });
-        }
-
-        // 尋找學生資料的索引位置
-        const studentIndex = studentsData.findIndex(s => s.id === id);
-        
-        if (studentIndex === -1) {
-          return res.status(404).json({
-            success: false,
-            error: '找不到該學生資料'
-          });
-        }
-
-        // 更新學生資料
-        studentsData[studentIndex] = {
-          ...studentsData[studentIndex],
-          ...updateData,
-          updatedAt: new Date().toISOString()
-        };
-
-        console.log('學生資料已更新:', studentsData[studentIndex]);
-
-        res.status(200).json({
-          success: true,
-          message: '資料更新成功',
-          data: studentsData[studentIndex]
-        });
-      } catch (error) {
-        console.error('更新錯誤:', error);
-        res.status(500).json({
-          success: false,
-          error: '更新失敗'
-        });
-      }
-      break;
-
-    case 'DELETE':
-      try {
-        const { id } = req.query;
-        
-        if (!id || typeof id !== 'string') {
-          return res.status(400).json({
-            success: false,
-            error: '缺少有效的學生ID'
-          });
-        }
-
-        // 尋找學生資料的索引位置
-        const studentIndex = studentsData.findIndex(s => s.id === id);
-        
-        if (studentIndex === -1) {
-          return res.status(404).json({
-            success: false,
-            error: '找不到該學生資料'
-          });
-        }
-
-        // 刪除學生資料
-        const deletedStudent = studentsData.splice(studentIndex, 1)[0];
-        
-        console.log('學生資料已刪除:', deletedStudent);
-
-        res.status(200).json({
-          success: true,
-          message: '資料刪除成功',
-          data: deletedStudent
-        });
-      } catch (error) {
-        console.error('刪除錯誤:', error);
-        res.status(500).json({
-          success: false,
-          error: '刪除失敗'
-        });
-      }
-      break;
-
-    default:
-      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-      res.status(405).json({
-        success: false,
-        error: `Method ${method} Not Allowed`
-      });
-      break;
+    res.status(200).json({ data: list });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? 'Internal Error' });
   }
 }
