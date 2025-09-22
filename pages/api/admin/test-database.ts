@@ -6,6 +6,7 @@ import {
   checkTableExists, 
   getTableInfo 
 } from '../../../lib/database';
+import { testVercelPostgresConnection } from '../../../lib/vercel-postgres';
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,9 +24,22 @@ export default async function handler(
   try {
     switch (action) {
       case 'test':
-        // 測試資料庫連接
-        const testResult = await testDatabaseConnection();
+        // 嘗試標準連接
+        console.log('嘗試標準資料庫連接...');
+        let testResult = await testDatabaseConnection();
+        
+        // 如果標準連接失敗且錯誤包含 SSL 相關，嘗試 Vercel Postgres
+        if (!testResult.success && testResult.message.includes('certificate')) {
+          console.log('標準連接失敗，嘗試 Vercel Postgres 連接...');
+          testResult = await testVercelPostgresConnection();
+        }
+        
         return res.status(testResult.success ? 200 : 500).json(testResult);
+
+      case 'vercel':
+        // 直接測試 Vercel Postgres
+        const vercelResult = await testVercelPostgresConnection();
+        return res.status(vercelResult.success ? 200 : 500).json(vercelResult);
 
       case 'init':
         // 初始化資料庫（建立表格）
@@ -43,6 +57,22 @@ export default async function handler(
         // 檢查資料庫狀態
         const statusResult = await getDatabaseStatus();
         return res.status(200).json(statusResult);
+
+      case 'env':
+        // 檢查環境變數
+        const envResult = {
+          success: true,
+          message: '環境變數檢查完成',
+          details: {
+            DATABASE_URL: !!process.env.DATABASE_URL,
+            POSTGRES_URL: !!process.env.POSTGRES_URL,
+            POSTGRES_URL_NON_POOLING: !!process.env.POSTGRES_URL_NON_POOLING,
+            NODE_ENV: process.env.NODE_ENV,
+            // 不顯示實際的連接字串，只顯示是否存在
+            hasAnyConnection: !!(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING)
+          }
+        };
+        return res.status(200).json(envResult);
 
       default:
         // 預設返回連接測試結果
