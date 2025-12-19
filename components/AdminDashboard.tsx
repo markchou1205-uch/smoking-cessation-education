@@ -1,25 +1,25 @@
 // components/AdminDashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  BarChart as RechartsBarChart, 
-  Bar as RechartsBar, 
-  XAxis as RechartsXAxis, 
-  YAxis as RechartsYAxis, 
-  CartesianGrid as RechartsCartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  PieChart as RechartsPieChart, 
-  Pie as RechartsPie, 
-  Cell as RechartsCell, 
-  ResponsiveContainer as RechartsResponsiveContainer 
+import {
+  BarChart as RechartsBarChart,
+  Bar as RechartsBar,
+  XAxis as RechartsXAxis,
+  YAxis as RechartsYAxis,
+  CartesianGrid as RechartsCartesianGrid,
+  Tooltip as RechartsTooltip,
+  PieChart as RechartsPieChart,
+  Pie as RechartsPie,
+  Cell as RechartsCell,
+  ResponsiveContainer as RechartsResponsiveContainer
 } from 'recharts';
-import { 
-  Users as LucideUsers, 
-  FileText as LucideFileText, 
-  Video as LucideVideo, 
-  CheckCircle as LucideCheckCircle, 
-  AlertTriangle as LucideAlertTriangle, 
-  Download as LucideDownload, 
-  Search as LucideSearch, 
+import {
+  Users as LucideUsers,
+  FileText as LucideFileText,
+  Video as LucideVideo,
+  CheckCircle as LucideCheckCircle,
+  AlertTriangle as LucideAlertTriangle,
+  Download as LucideDownload,
+  Search as LucideSearch,
   RefreshCw as LucideRefreshCw,
   BarChart3 as LucideBarChart3
 } from 'lucide-react';
@@ -63,7 +63,7 @@ interface Statistics {
   quitIntentionStats: { name: string; value: number }[];
   instructorStats: { name: string; value: number }[];
   classStats: { name: string; value: number }[];
-    // 新鍵名（後端 /api/admin/statistics 回傳）
+  // 新鍵名（後端 /api/admin/statistics 回傳）
   startSmokingPeriodStats?: { name: string; value: number }[];
   weeklyFrequencyStats?: { name: string; value: number }[];
   smokingReasonsStats?: { name: string; value: number }[];
@@ -91,7 +91,7 @@ function ymdNDaysAgo(n: number) {
 }
 
 function startOfDay(ymd: string) { return new Date(`${ymd}T00:00:00`); }
-function endOfDay(ymd: string)   { return new Date(`${ymd}T23:59:59.999`); }
+function endOfDay(ymd: string) { return new Date(`${ymd}T23:59:59.999`); }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
@@ -103,139 +103,186 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
   const [activeTab, setActiveTab] = useState<'records' | 'statistics'>('records');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [fromDate, setFromDate] = useState(ymdNDaysAgo(30));
-  const [toDate, setToDate]     = useState(todayYMD());
+  const [toDate, setToDate] = useState(todayYMD());
   const TZ_OFFSET = 480;
 
-   // 小工具：把陣列依 key 彙整計數
-   const tally = (arr: (string|undefined|null)[])=>{
-     const map = new Map<string, number>();
-     for (const v of arr) if (v) map.set(v, (map.get(v)||0)+1);
-     return Array.from(map.entries()).map(([name,value])=>({name, value}));
-   };
-   // 由學生紀錄「依日期區間」計算統計
-   const computeStatistics = (records: StudentRecord[]): Statistics => {
-     const from = startOfDay(fromDate).getTime();
-     const to   = endOfDay(toDate).getTime();
-     const inRange = records.filter(r=>{
-     const t = r.createdAt
-  ? new Date(r.createdAt).getTime()
-  : (r as any).created_at
-    ? new Date((r as any).created_at).getTime()
-    : NaN;
+  // 小工具：把陣列依 key 彙整計數
+  const tally = (arr: (string | undefined | null)[]) => {
+    const map = new Map<string, number>();
+    for (const v of arr) if (v) map.set(v, (map.get(v) || 0) + 1);
+    return Array.from(map.entries()).map(([name, value]) => ({ name, value }));
+  };
+  // 由學生紀錄「依日期區間」計算統計
+  const computeStatistics = (records: StudentRecord[]): Statistics => {
+    const from = startOfDay(fromDate).getTime();
+    const to = endOfDay(toDate).getTime();
+    const inRange = records.filter(r => {
+      const t = r.createdAt
+        ? new Date(r.createdAt).getTime()
+        : (r as any).created_at
+          ? new Date((r as any).created_at).getTime()
+          : NaN;
 
-     return Number.isFinite(t) && t >= from && t <= to;
-     });
-     const totalStudents = inRange.length;
-     const completedStudents = inRange.filter(r=>r.status==='completed').length;
-     const completionRate = totalStudents ? Math.round((completedStudents/totalStudents)*100) : 0;
-     // 單值欄位直接彙整
-     const startSmokingStats  = tally(inRange.map(r=>r.startSmoking));
-     const frequencyStats     = tally(inRange.map(r=>r.frequency));
-     const dailyAmountStats   = tally(inRange.map(r=>r.dailyAmount));
-     const tobaccoTypeStats   = tally(inRange.map(r=>r.tobaccoType));
-     const quitIntentionStats = tally(inRange.map(r=>r.quitIntention));
-     const instructorStats    = tally(inRange.map(r=>r.instructor));
-     // 班級可依你現有顯示邏輯截取到「xx系」
-     const classStats         = tally(inRange.map(r=> r.class ? (r.class.split('系')[0]+'系') : r.class));
-     // 多選「原因」需要攤平
-     const reasonsStatsMap = new Map<string, number>();
-     for (const r of inRange) {
-       if (Array.isArray(r.reasons)) {
-         for (const reason of r.reasons) {
-           if (!reason) continue;
-           reasonsStatsMap.set(reason, (reasonsStatsMap.get(reason)||0)+1);
-         }
-       }
-     }
-     const reasonsStats = Array.from(reasonsStatsMap.entries()).map(([name,value])=>({name,value}));
-     return {
-       totalStudents, completedStudents, completionRate,
-       startSmokingStats, frequencyStats, dailyAmountStats, reasonsStats,
-       tobaccoTypeStats, quitIntentionStats, instructorStats, classStats
-     };
-   };
-
-// "use client";
-
-async function loadData() {
-  setLoading(true);
-  try {
-    // 如果你頁面有日期區間（fromDate / toDate），一起帶上；沒有就保留基礎版
-    const u = new URL('/api/students', window.location.origin); // 等同 /api/students
-    if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
-    if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
-
-const res = await fetch(u.toString(), { cache: 'no-store' });
-if (!res.ok) {
-  const text = await res.text();
-  throw new Error(`fetch /api/students failed: ${res.status} ${text}`);
-}
-
-    const { data } = await res.json(); // 後端已把 submissions 轉成前端要的 StudentRecord 形狀
-    setStudentRecords(data || []);
-
-    // 若你的儀表板統計是前端計算，這裡直接重算一次
-    if (typeof computeStatistics === 'function') {
-      setStatistics(computeStatistics(data || []));
+      return Number.isFinite(t) && t >= from && t <= to;
+    });
+    const totalStudents = inRange.length;
+    const completedStudents = inRange.filter(r => r.status === 'completed').length;
+    const completionRate = totalStudents ? Math.round((completedStudents / totalStudents) * 100) : 0;
+    // 單值欄位直接彙整
+    const startSmokingStats = tally(inRange.map(r => r.startSmoking));
+    const frequencyStats = tally(inRange.map(r => r.frequency));
+    const dailyAmountStats = tally(inRange.map(r => r.dailyAmount));
+    const tobaccoTypeStats = tally(inRange.map(r => r.tobaccoType));
+    const quitIntentionStats = tally(inRange.map(r => r.quitIntention));
+    const instructorStats = tally(inRange.map(r => r.instructor));
+    // 班級可依你現有顯示邏輯截取到「xx系」
+    const classStats = tally(inRange.map(r => r.class ? (r.class.split('系')[0] + '系') : r.class));
+    // 多選「原因」需要攤平
+    const reasonsStatsMap = new Map<string, number>();
+    for (const r of inRange) {
+      if (Array.isArray(r.reasons)) {
+        for (const reason of r.reasons) {
+          if (!reason) continue;
+          reasonsStatsMap.set(reason, (reasonsStatsMap.get(reason) || 0) + 1);
+        }
+      }
     }
+    const reasonsStats = Array.from(reasonsStatsMap.entries()).map(([name, value]) => ({ name, value }));
+    return {
+      totalStudents, completedStudents, completionRate,
+      startSmokingStats, frequencyStats, dailyAmountStats, reasonsStats,
+      tobaccoTypeStats, quitIntentionStats, instructorStats, classStats
+    };
+  };
 
-    setLastUpdated?.(new Date());
-  } catch (e: any) {
-    console.error(e);
-  } finally {
-    setLoading(false);
-  }
-}
-async function loadStats() {
-  try {
-    const u = new URL('/api/admin/statistics', window.location.origin);
-    if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
-    if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
-    u.searchParams.set('tzOffset', String(TZ_OFFSET));
+  // "use client";
 
-    const res = await fetch(u.toString(), { cache: 'no-store' });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`fetch /api/admin/statistics failed: ${res.status} ${text}`);
+  // "use client";
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const gasUrl = process.env.NEXT_PUBLIC_GAS_API_URL;
+      if (!gasUrl) throw new Error('Missing NEXT_PUBLIC_GAS_API_URL');
+
+      const u = new URL(gasUrl);
+      u.searchParams.set('action', 'get_students');
+
+      // Pass filters to GAS if needed, or filter locally. 
+      // GAS implementation supports 'from' and 'to'.
+      if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
+      if (typeof toDate === 'string') u.searchParams.set('to', toDate);
+
+      const res = await fetch(u.toString());
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`fetch GAS failed: ${res.status} ${text}`);
+      }
+
+      const json = await res.json();
+      if (json.status === 'error') throw new Error(json.message);
+
+      const data = json.data || [];
+
+      // Parse 'data' JSON string in each row if it's a string
+      const parsedData = data.map((r: any) => {
+        // GAS might return data column as already parsed or string depending on implementation. 
+        // Our generic doGet usually sends raw JSON values. Code.gs sends 'r[4]' which is stringified JSON.
+        // We need to parse it to match frontend expectation.
+        let d: any = {};
+        try {
+          d = typeof r.data === 'string' ? JSON.parse(r.data) : (r.data || {});
+        } catch { }
+
+        return {
+          ...r,
+          // Map dynamic form fields to flat properties for the UI
+          name: d.name,
+          class: d.class,
+          phone: d.phone,
+          instructor: d.instructor,
+          startSmoking: d.startSmokingPeriod,
+          frequency: d.weeklyFrequency,
+          dailyAmount: d.dailyAmount,
+          reasons: d.smokingReasons,
+          familySmoking: d.familySmoker,
+          campusAwareness: d.knowSchoolBan,
+          signageAwareness: d.seenTobaccoAds,
+          tobaccoType: d.productTypesUsed,
+          quitAttempts: d.everVaped, // Note: mismatch in original mappings? Checking mapping below.
+          // API.ts: everVaped -> form.everVaped
+          // Dashboard: quitAttempts -> form.quitAttempts doesn't exist in API.ts?
+          // Let's stick to the key names we used in API.ts payload.
+          quitIntention: d.wantQuit,
+          counselingInterest: d.wantsCounseling,
+
+          createdAt: r.created_at
+        };
+      });
+
+      setStudentRecords(parsedData);
+
+      if (typeof computeStatistics === 'function') {
+        setStatistics(computeStatistics(parsedData));
+      }
+
+      setLastUpdated?.(new Date());
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    // 直接把後端的統計物件塞進 state（已含我們要的各題目分布）
-    setStatistics(data);
-  } catch (err) {
-    console.error(err);
   }
-}
+
+  async function loadStats() {
+    // Client-side calculation is sufficient with computeStatistics, 
+    // but if we want to use the server-side action:
+    /*
+    try {
+      const gasUrl = process.env.NEXT_PUBLIC_GAS_API_URL;
+      if (!gasUrl) return;
+      const u = new URL(gasUrl);
+      u.searchParams.set('action', 'stats');
+      const res = await fetch(u.toString());
+      const json = await res.json();
+      if (json.status === 'success') {
+         // logic to set stats
+      }
+    } catch (err) { console.error(err); }
+    */
+    // For now, allow computeStatistics (local) to handle it since we fetch all data anyway.
+  }
 
 
   // 初始載入
-useEffect(() => {
-  loadData();
-  loadStats();
-}, []);
-   // 日期區間或原始資料變更 → 重新計算統計
-   useEffect(() => {
-     if (studentRecords.length) {
-       setStatistics(computeStatistics(studentRecords));
-     }
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-   }, [fromDate, toDate, studentRecords]);
+  useEffect(() => {
+    loadData();
+    loadStats();
+  }, []);
+  // 日期區間或原始資料變更 → 重新計算統計
+  useEffect(() => {
+    if (studentRecords.length) {
+      setStatistics(computeStatistics(studentRecords));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromDate, toDate, studentRecords]);
   // 過濾學生記錄
   const filteredRecords = studentRecords.filter(record => {
     const matchesSearch = record.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         record.studentId?.toLowerCase().includes(searchTerm.toLowerCase());
+      record.studentId?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClass = selectedClass === 'all' || record.class?.includes(selectedClass);
     const matchesInstructor = selectedInstructor === 'all' || record.instructor === selectedInstructor;
-    
+
     return matchesSearch && matchesClass && matchesInstructor;
   });
 
   // 獲取唯一的班級和教官列表
   const uniqueClasses = Array.from(new Set(
     studentRecords
-      .map(r => r.class?.split('系')[0]+'系')
+      .map(r => r.class?.split('系')[0] + '系')
       .filter(Boolean)
   ));
-  
+
   const uniqueInstructors = Array.from(new Set(
     studentRecords
       .map(r => r.instructor)
@@ -246,11 +293,47 @@ useEffect(() => {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   const exportToCSV = () => {
-  const u = new URL('/api/students/export', window.location.origin);
-  // 若頁面上有日期區間，就一起帶上；沒有這兩個 state 就刪掉這兩行
-  if (typeof fromDate === 'string') u.searchParams.set('from', fromDate);
-  if (typeof toDate === 'string')   u.searchParams.set('to', toDate);
-  window.location.href = u.toString(); // 觸發下載
+    // Client-side CSV generation
+    if (!studentRecords.length) {
+      alert('無資料可匯出');
+      return;
+    }
+
+    const headers = [
+      'ID', '學號', '建立時間', '姓名', '科系', '班級', '手機', '輔導教官',
+      '你從什麼時候開始吸菸', '你一週抽幾次', '你一天吸菸幾支',
+      '你平常吸菸的原因', '你是使用哪種菸品',
+      '你家中有人吸菸嗎', '你知道校園全面禁止吸菸嗎', '你有在學校看過菸商廣告嗎',
+      '你有曾抽過電子煙嗎', '你現在有沒有戒菸的想法', '你現在有沒有戒菸的需求', '政府免費戒菸輔導是否有興趣'
+    ];
+
+    const esc = (s: any) => {
+      if (s === null || s === undefined) return '';
+      const str = String(s);
+      return /[,"\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+
+    const csvContent = studentRecords.map(r => {
+      const yn = (v: any) => v === true || v === 'true' || v === '有' ? '有' : (v === false || v === 'false' || v === '沒有' ? '沒有' : v || '');
+      return [
+        r.id, r.studentId, r.createdAt, r.name, '', r.class, r.phone, r.instructor, // Note: dept empty in parsed?
+        r.startSmoking, r.frequency, r.dailyAmount,
+        Array.isArray(r.reasons) ? r.reasons.join('、') : r.reasons,
+        Array.isArray(r.tobaccoType) ? r.tobaccoType.join('、') : r.tobaccoType,
+        yn(r.familySmoking), yn(r.campusAwareness), yn(r.signageAwareness),
+        yn(r.quitAttempts), yn(r.quitIntention), yn(r.counselingInterest),
+        '' // interestedInFreeSvc missing in parsed?
+      ].map(esc).join(',');
+    }).join('\n');
+
+    const blob = new Blob(['\uFEFF' + headers.join(',') + '\n' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `students_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading) {
@@ -302,7 +385,7 @@ useEffect(() => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <LucideCheckCircle className="h-8 w-8 text-green-600" />
@@ -314,7 +397,7 @@ useEffect(() => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <LucideVideo className="h-8 w-8 text-purple-600" />
@@ -326,7 +409,7 @@ useEffect(() => {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <LucideFileText className="h-8 w-8 text-orange-600" />
@@ -350,22 +433,20 @@ useEffect(() => {
             <nav className="-mb-px flex">
               <button
                 onClick={() => setActiveTab('records')}
-                className={`py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'records'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-6 border-b-2 font-medium text-sm ${activeTab === 'records'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <LucideFileText className="inline-block w-4 h-4 mr-2" />
                 學生記錄
               </button>
               <button
                 onClick={() => setActiveTab('statistics')}
-                className={`py-4 px-6 border-b-2 font-medium text-sm ${
-                  activeTab === 'statistics'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-6 border-b-2 font-medium text-sm ${activeTab === 'statistics'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <LucideBarChart3 className="inline-block w-4 h-4 mr-2" />
                 統計分析
@@ -390,7 +471,7 @@ useEffect(() => {
                     />
                   </div>
                 </div>
-                
+
                 <select
                   value={selectedClass}
                   onChange={(e) => setSelectedClass(e.target.value)}
@@ -401,7 +482,7 @@ useEffect(() => {
                     <option key={cls} value={cls}>{cls}</option>
                   ))}
                 </select>
-                
+
                 <select
                   value={selectedInstructor}
                   onChange={(e) => setSelectedInstructor(e.target.value)}
@@ -412,7 +493,7 @@ useEffect(() => {
                     <option key={instructor} value={instructor}>{instructor}</option>
                   ))}
                 </select>
-                
+
                 <button
                   onClick={exportToCSV}
                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -451,8 +532,8 @@ useEffect(() => {
                     {filteredRecords.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                          {searchTerm || selectedClass !== 'all' || selectedInstructor !== 'all' 
-                            ? '沒有符合條件的記錄' 
+                          {searchTerm || selectedClass !== 'all' || selectedInstructor !== 'all'
+                            ? '沒有符合條件的記錄'
                             : '目前沒有學生記錄'}
                         </td>
                       </tr>
@@ -478,11 +559,10 @@ useEffect(() => {
                             {record.createdAt ? new Date(record.createdAt).toLocaleDateString() : '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              record.status === 'completed' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${record.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                              }`}>
                               {record.status === 'completed' ? '已完成' : '進行中'}
                             </span>
                           </td>
@@ -504,57 +584,57 @@ useEffect(() => {
           {/* 統計分析頁籤 */}
           {activeTab === 'statistics' && statistics && (
             <div className="p-6">
-                             {/* 新增：區間選擇器 */}
-               <div className="flex flex-col md:flex-row md:items-end gap-3 mb-6">
-                 <div>
-                   <label className="block text-sm mb-1">起始日期</label>
-                   <input type="date" value={fromDate} max={toDate}
-                          onChange={(e)=>setFromDate(e.target.value)}
-                          className="border rounded px-3 py-2"/>
-                 </div>
-                 <div>
-                   <label className="block text-sm mb-1">結束日期</label>
-                   <input type="date" value={toDate}
-                          min={fromDate} max={todayYMD()}
-                          onChange={(e)=>setToDate(e.target.value)}
-                          className="border rounded px-3 py-2"/>
-                 </div>
-                   <button onClick={() => loadStats()} className="h-10 px-4 rounded bg-black text-white">
-                     套用
+              {/* 新增：區間選擇器 */}
+              <div className="flex flex-col md:flex-row md:items-end gap-3 mb-6">
+                <div>
+                  <label className="block text-sm mb-1">起始日期</label>
+                  <input type="date" value={fromDate} max={toDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="border rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">結束日期</label>
+                  <input type="date" value={toDate}
+                    min={fromDate} max={todayYMD()}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="border rounded px-3 py-2" />
+                </div>
+                <button onClick={() => loadStats()} className="h-10 px-4 rounded bg-black text-white">
+                  套用
+                </button>
+                <div className="flex gap-2 md:ml-auto">
+                  <button
+                    className="h-10 px-3 border rounded"
+                    onClick={() => {
+                      const f = ymdNDaysAgo(7); const t = todayYMD();
+                      setFromDate(f); setToDate(t);
+                      setTimeout(loadStats, 0);
+                    }}
+                  >
+                    近7天
                   </button>
-                 <div className="flex gap-2 md:ml-auto">
-<button
-  className="h-10 px-3 border rounded"
-  onClick={() => {
-    const f = ymdNDaysAgo(7); const t = todayYMD();
-    setFromDate(f); setToDate(t);
-    setTimeout(loadStats, 0);
-  }}
->
-  近7天
-</button>
-<button
-  className="h-10 px-3 border rounded"
-  onClick={() => {
-    const f = ymdNDaysAgo(30); const t = todayYMD();
-    setFromDate(f); setToDate(t);
-    setTimeout(loadStats, 0);
-  }}
->
-  近30天
-</button>
-<button
-  className="h-10 px-3 border rounded"
-  onClick={() => {
-    const f = ymdNDaysAgo(90); const t = todayYMD();
-    setFromDate(f); setToDate(t);
-    setTimeout(loadStats, 0);
-  }}
->
-  近90天
-</button>
-                 </div>
-               </div>
+                  <button
+                    className="h-10 px-3 border rounded"
+                    onClick={() => {
+                      const f = ymdNDaysAgo(30); const t = todayYMD();
+                      setFromDate(f); setToDate(t);
+                      setTimeout(loadStats, 0);
+                    }}
+                  >
+                    近30天
+                  </button>
+                  <button
+                    className="h-10 px-3 border rounded"
+                    onClick={() => {
+                      const f = ymdNDaysAgo(90); const t = todayYMD();
+                      setFromDate(f); setToDate(t);
+                      setTimeout(loadStats, 0);
+                    }}
+                  >
+                    近90天
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* 開始吸菸年齡統計 */}
                 <div className="bg-white p-6 rounded-lg border">

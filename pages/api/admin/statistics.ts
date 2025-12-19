@@ -1,6 +1,6 @@
 // pages/api/admin/statistics.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabaseAdmin';
+import { googleSheet } from '../../../lib/googleSheet';
 
 // ---------- helpers ----------
 function pad(n: number) { return String(n).padStart(2, '0'); }
@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const tzOffset = Number.isFinite(Number(req.query.tzOffset)) ? Number(req.query.tzOffset) : 480;
     const fromYmd = typeof req.query.from === 'string' ? req.query.from : undefined;
-    const toYmd   = typeof req.query.to   === 'string' ? req.query.to   : undefined;
+    const toYmd = typeof req.query.to === 'string' ? req.query.to : undefined;
 
     let fromIso: string, toIsoExclusive: string, rangeLabel: string;
     if (fromYmd && toYmd) {
@@ -64,20 +64,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       rangeLabel = `近30天（${from} ~ ${to}）`;
     }
 
-    // 取資料
-    const { data: rows, error } = await supabaseAdmin
-      .from('submissions')
-      .select('id, student_id, data, created_at')
-      .gte('created_at', fromIso)
-      .lt('created_at', toIsoExclusive)
-      .limit(20000);
+    // 取資料 (Google Sheets)
+    // Note: googleSheet helper's `to` uses <=, but here we have exclusive limit.
+    // Depending on precision, we can use toIsoExclusive directly or filter manually.
+    // We'll fetch slightly loosely and filter precisely here.
+    const rows = await googleSheet.getSubmissions({
+      from: fromIso,
+      to: toIsoExclusive
+    });
 
-    if (error) throw error;
+    // Exact filtering < toIsoExclusive
+    const filteredRows = rows.filter(r => r.created_at >= fromIso && r.created_at < toIsoExclusive);
 
-    const { count: totalAll, error: cntErr } = await supabaseAdmin
-      .from('submissions')
-      .select('*', { count: 'exact', head: true });
-    if (cntErr) throw cntErr;
+    // 全期間總數
+    const allRows = await googleSheet.getSubmissions({}); // get all
+    const totalAll = allRows.length;
 
     // 轉成分析需要的欄位
     type R = {
@@ -98,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       interestedInFreeSvc?: boolean | null;
     };
 
-    const parsed: R[] = (rows ?? []).map((row: any) => {
+    const parsed: R[] = filteredRows.map((row: any) => {
       const d = parseObj(row.data);
       return {
         created_at: row.created_at,
@@ -108,16 +109,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         class: normClassName(d.class ?? ''),
         instructor: d.instructor ?? '',
         startSmokingPeriod: d.startSmokingPeriod ?? null,
-        weeklyFrequency:    d.weeklyFrequency ?? null,
-        dailyAmount:        d.dailyAmount ?? null,
-        smokingReasons:     Array.isArray(d.smokingReasons) ? d.smokingReasons : [],
-        productTypesUsed:   Array.isArray(d.productTypesUsed) ? d.productTypesUsed : [],
-        familySmoker:        typeof d.familySmoker === 'boolean' ? d.familySmoker : null,
-        knowSchoolBan:       typeof d.knowSchoolBan === 'boolean' ? d.knowSchoolBan : null,
-        seenTobaccoAds:      typeof d.seenTobaccoAds === 'boolean' ? d.seenTobaccoAds : null,
-        everVaped:           typeof d.everVaped === 'boolean' ? d.everVaped : null,
-        wantQuit:            typeof d.wantQuit === 'boolean' ? d.wantQuit : null,
-        wantsCounseling:     typeof d.wantsCounseling === 'boolean' ? d.wantsCounseling : null,
+        weeklyFrequency: d.weeklyFrequency ?? null,
+        dailyAmount: d.dailyAmount ?? null,
+        smokingReasons: Array.isArray(d.smokingReasons) ? d.smokingReasons : [],
+        productTypesUsed: Array.isArray(d.productTypesUsed) ? d.productTypesUsed : [],
+        familySmoker: typeof d.familySmoker === 'boolean' ? d.familySmoker : null,
+        knowSchoolBan: typeof d.knowSchoolBan === 'boolean' ? d.knowSchoolBan : null,
+        seenTobaccoAds: typeof d.seenTobaccoAds === 'boolean' ? d.seenTobaccoAds : null,
+        everVaped: typeof d.everVaped === 'boolean' ? d.everVaped : null,
+        wantQuit: typeof d.wantQuit === 'boolean' ? d.wantQuit : null,
+        wantsCounseling: typeof d.wantsCounseling === 'boolean' ? d.wantsCounseling : null,
         interestedInFreeSvc: typeof d.interestedInFreeSvc === 'boolean' ? d.interestedInFreeSvc : null,
       };
     });
@@ -134,25 +135,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const ymd = `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
       byDate.set(ymd, (byDate.get(ymd) || 0) + 1);
     }
-    const dailySeries = Array.from(byDate.entries()).sort(([a],[b]) => a < b ? -1 : 1).map(([date, count]) => ({ date, count }));
+    const dailySeries = Array.from(byDate.entries()).sort(([a], [b]) => a < b ? -1 : 1).map(([date, count]) => ({ date, count }));
 
     // 題目分布
     const startSmokingPeriodStats = tally(parsed.map(r => r.startSmokingPeriod ?? undefined));
-    const weeklyFrequencyStats    = tally(parsed.map(r => r.weeklyFrequency ?? undefined));
-    const dailyAmountStats        = tally(parsed.map(r => r.dailyAmount ?? undefined));
-    const smokingReasonsStats     = tallyMulti(parsed.map(r => r.smokingReasons));
-    const productTypesUsedStats   = tallyMulti(parsed.map(r => r.productTypesUsed));
+    const weeklyFrequencyStats = tally(parsed.map(r => r.weeklyFrequency ?? undefined));
+    const dailyAmountStats = tally(parsed.map(r => r.dailyAmount ?? undefined));
+    const smokingReasonsStats = tallyMulti(parsed.map(r => r.smokingReasons));
+    const productTypesUsedStats = tallyMulti(parsed.map(r => r.productTypesUsed));
 
-    const familySmokerStats        = boolStats(parsed.map(r => r.familySmoker));
-    const knowSchoolBanStats       = boolStats(parsed.map(r => r.knowSchoolBan));
-    const seenTobaccoAdsStats      = boolStats(parsed.map(r => r.seenTobaccoAds));
-    const everVapedStats           = boolStats(parsed.map(r => r.everVaped));
-    const wantQuitStats            = boolStats(parsed.map(r => r.wantQuit));
-    const wantsCounselingStats     = boolStats(parsed.map(r => r.wantsCounseling));
+    const familySmokerStats = boolStats(parsed.map(r => r.familySmoker));
+    const knowSchoolBanStats = boolStats(parsed.map(r => r.knowSchoolBan));
+    const seenTobaccoAdsStats = boolStats(parsed.map(r => r.seenTobaccoAds));
+    const everVapedStats = boolStats(parsed.map(r => r.everVaped));
+    const wantQuitStats = boolStats(parsed.map(r => r.wantQuit));
+    const wantsCounselingStats = boolStats(parsed.map(r => r.wantsCounseling));
     const interestedInFreeSvcStats = boolStats(parsed.map(r => r.interestedInFreeSvc));
 
     const instructorStats = tally(parsed.map(r => r.instructor ?? undefined));
-    const classStats      = tally(parsed.map(r => r.class ?? undefined));
+    const classStats = tally(parsed.map(r => r.class ?? undefined));
 
     // （可選）向下相容舊鍵名：有用到再讀
     const legacy = {
