@@ -1,6 +1,7 @@
 // components/PersonalInfoPage.tsx
 import React, { useState } from 'react';
 import { User } from 'lucide-react';
+import { createStudent } from '../utils/api';
 
 interface PersonalInfoPageProps {
   onNext: () => void;
@@ -96,7 +97,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
   const handleReasonChange = (reason: string) => {
     setFormData(prev => ({
       ...prev,
-      reasons: prev.reasons.includes(reason) 
+      reasons: prev.reasons.includes(reason)
         ? prev.reasons.filter(r => r !== reason)
         : [...prev.reasons, reason]
     }));
@@ -104,7 +105,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // 驗證所有必填欄位
     const phoneError = validatePhone(formData.phone);
     const studentIdError = validateStudentId(formData.studentId);
@@ -123,25 +124,34 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
     }
 
     try {
-      // 發送資料到後台
-      const response = await fetch('/api/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          completedDate: new Date().toISOString(),
-          status: 'in_progress'
-        }),
+      // 使用 createStudent 呼叫 GAS 後端
+      await createStudent({
+        studentId: formData.studentId,
+        title: "個人資料與吸菸調查",
+        score: 0,
+
+        name: formData.name,
+        class: formData.class,
+        phone: formData.phone,
+        instructor: formData.instructor,
+
+        startSmokingPeriod: formData.startSmoking,
+        weeklyFrequency: formData.frequency,
+        dailyAmount: formData.dailyAmount,
+        smokingReasons: formData.reasons,
+        productTypesUsed: formData.tobaccoType ? [formData.tobaccoType] : [],
+
+        familySmoker: formData.familySmoking,
+        knowSchoolBan: formData.campusAwareness,
+        seenTobaccoAds: formData.signageAwareness,
+
+        everVaped: formData.tobaccoType === '電子煙' ? '是' : '否',
+
+        wantQuit: formData.quitIntention,
+        wantsCounseling: formData.counselingInterest,
       });
 
-      if (!response.ok) {
-        throw new Error('提交失敗');
-      }
-
-      const result = await response.json();
-      console.log('資料提交成功:', result);
+      console.log('資料提交成功');
 
       // 設定本地狀態並進入下一步
       setStudentData(formData);
@@ -158,7 +168,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
       <h2 className="text-xl font-semibold mb-6 flex items-center">
         <User className="mr-2" /> 個人資料填寫及吸菸狀況調查
       </h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 個人基本資料 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -172,7 +182,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
               onChange={(e) => handleInputChange('name', e.target.value)}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700">班級 *</label>
             <input
@@ -184,16 +194,15 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
               onChange={(e) => handleInputChange('class', e.target.value)}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700">學號 *</label>
             <input
               type="text"
               required
               placeholder="例：A123456789"
-              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${
-                errors.studentId ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${errors.studentId ? 'border-red-500' : 'border-gray-300'
+                }`}
               value={formData.studentId}
               onChange={(e) => handleInputChange('studentId', e.target.value.toUpperCase())}
               maxLength={9}
@@ -202,16 +211,15 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
               <p className="mt-1 text-sm text-red-600">{errors.studentId}</p>
             )}
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700">手機 *</label>
             <input
               type="tel"
               required
               placeholder="例：0912345678"
-              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${
-                errors.phone ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, ''))}
               maxLength={10}
@@ -220,14 +228,13 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
               <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
             )}
           </div>
-          
+
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700">輔導教官 *</label>
             <select
               required
-              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${
-                errors.instructor ? 'border-red-500' : 'border-gray-300'
-              }`}
+              className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${errors.instructor ? 'border-red-500' : 'border-gray-300'
+                }`}
               value={formData.instructor}
               onChange={(e) => handleInputChange('instructor', e.target.value)}
             >
@@ -247,7 +254,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
         {/* 吸菸狀況調查 */}
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4">吸菸狀況調查</h3>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">你從什麼時候開始吸菸？ *</label>
