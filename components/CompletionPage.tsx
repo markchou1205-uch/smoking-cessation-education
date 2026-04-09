@@ -51,16 +51,12 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
       
       pdf.addImage(imgData, 'JPEG', margin, margin, printWidth, printHeight);
       
-      // 使用 Blob 下載模式，強迫瀏覽器套用正確的 .pdf 副檔名
-      const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `戒菸教育執行記錄表_${studentData?.name || studentData?.studentId || '未命名'}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // 改為純英文檔名，避免特定瀏覽器（尤其是手機內建瀏覽器或舊版 Safari）因為中文編碼問題強制拔除副檔名
+      const safeId = studentData?.studentId ? String(studentData.studentId).trim() : 'Unknown';
+      const filename = `Record_${safeId}.pdf`;
+      
+      // 直接依賴 jsPDF 原生、最穩定的儲存機制
+      pdf.save(filename);
     } catch (error) {
       console.error('PDF 生成失敗', error);
       alert('產生 PDF 時發生錯誤，請稍後重試。');
