@@ -14,7 +14,6 @@ import PersonalInfoPage from '../components/PersonalInfoPage';
 import VideoPage from '../components/VideoPage';
 import QuizPage from '../components/QuizPage';
 import EssayPage from '../components/EssayPage';
-import EventSelectionPage from '../components/EventSelectionPage';
 import CompletionPage from '../components/CompletionPage';
 import ProgressIndicator from '../components/ProgressIndicator';
 
@@ -40,7 +39,7 @@ const SmokingCessationApp = () => {
     // 不改變 currentPage，保持在測驗頁面
   };
 
-  const totalPages = 6;
+  const totalPages = 5;
 
   return (
     <div className="min-h-screen bg-gray-100 py-8">
@@ -77,13 +76,6 @@ const SmokingCessationApp = () => {
         )}
         
         {currentPage === 5 && (
-          <EventSelectionPage 
-            onNext={nextPage}
-            studentData={studentData}
-          />
-        )}
-        
-        {currentPage === 6 && (
           <CompletionPage 
             studentData={studentData}
             selectedDate={selectedDate}
@@ -96,7 +88,7 @@ const SmokingCessationApp = () => {
             <div className="bg-white p-4 rounded-lg shadow-lg">
               <h3 className="text-sm font-medium text-gray-600 mb-2">開發者導航</h3>
               <div className="space-x-2">
-                {[1, 2, 3, 4, 5, 6].map(page => (
+                {[1, 2, 3, 4, 5].map(page => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}

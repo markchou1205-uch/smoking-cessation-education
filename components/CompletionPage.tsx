@@ -117,22 +117,14 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
               <span className="font-medium w-16">輔導教官簽名：</span>
               <span className="border-b border-gray-400 w-40 pb-1"></span>
             </div>
-            <div className="flex items-center">
-              <span className="font-medium w-4">五、</span>
-              <span>完成菸害宣導參與場次勾選：</span>
-              <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
-            </div>
-            <div className="flex items-center ml-8">
-              <span className="font-medium w-20">選擇場次：</span>
-              <span className="border-b border-gray-400 flex-1 pb-1 max-w-xs">{selectedDate || '___________'}</span>
-            </div>
+
           </div>
         </div>
 
         {/* 法律聲明 */}
         <div className="mb-6">
           <div className="flex items-start">
-            <span className="font-medium w-4 text-gray-700">六、</span>
+            <span className="font-medium w-4 text-gray-700">五、</span>
             <span className="text-gray-700">
               我知悉如果沒有參與指定日期的菸害宣導，將視同沒有完成戒菸教育，
               除了將依校規處分，學校也會依菸害防制法移送裁罰。
@@ -184,7 +176,7 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
             <div className="text-yellow-700 space-y-2">
               <p>📄 列印本記錄表，交給輔導教官簽名</p>
               <p>📝 將手寫心得一併交給輔導教官審查</p>
-              <p>📅 記住您選擇的宣導活動日期：<strong>{selectedDate}</strong></p>
+
               <p>⚠️ 務必準時參加宣導活動，完成所有戒菸教育流程</p>
             </div>
           </div>

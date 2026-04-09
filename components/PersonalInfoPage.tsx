@@ -35,21 +35,6 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
     instructor: ''
   });
 
-  // 輔導教官選項
-  const instructorOptions = [
-    '郭威均教官',
-    '陳鈴玉教官',
-    '許順益教官',
-    '陳震宇教官',
-    '周增明教官',
-    '林雅月教官',
-    '鄧建鑫教官',
-    '邱信國教官',
-    '林政益教官(進)',
-    '温榮星教官(進)',
-    '王仁柏教官(進)'
-  ];
-
   // 驗證手機號碼（10碼數字）
   const validatePhone = (phone: string) => {
     const phoneRegex = /^\d{10}$/;
@@ -89,7 +74,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
     } else if (field === 'instructor') {
       setErrors(prev => ({
         ...prev,
-        instructor: value ? '' : '請選擇輔導教官'
+        instructor: value.trim() ? '' : '請填寫輔導教官'
       }));
     }
   };
@@ -109,7 +94,7 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
     // 驗證所有必填欄位
     const phoneError = validatePhone(formData.phone);
     const studentIdError = validateStudentId(formData.studentId);
-    const instructorError = !formData.instructor ? '請選擇輔導教官' : '';
+    const instructorError = !formData.instructor.trim() ? '請填寫輔導教官' : '';
 
     setErrors({
       phone: phoneError,
@@ -231,20 +216,15 @@ const PersonalInfoPage: React.FC<PersonalInfoPageProps> = ({ onNext, studentData
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700">輔導教官 *</label>
-            <select
+            <input
+              type="text"
               required
+              placeholder="請填寫輔導教官姓名"
               className={`mt-1 block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border ${errors.instructor ? 'border-red-500' : 'border-gray-300'
                 }`}
               value={formData.instructor}
               onChange={(e) => handleInputChange('instructor', e.target.value)}
-            >
-              <option value="">請選擇輔導教官</option>
-              {instructorOptions.map((instructor, index) => (
-                <option key={index} value={instructor}>
-                  {instructor}
-                </option>
-              ))}
-            </select>
+            />
             {errors.instructor && (
               <p className="mt-1 text-sm text-red-600">{errors.instructor}</p>
             )}
