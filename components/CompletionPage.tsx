@@ -35,7 +35,8 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
       
       // 稍微提高 scale 可以增加 PDF 清晰度
       const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
+      // 改用 JPEG 壓縮，將 9+MB 的體積縮小至約幾百 KB，避免瀏覽器下載異常
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
       
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -48,8 +49,18 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
       const printWidth = pdfWidth - margin * 2;
       const printHeight = (canvas.height * printWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', margin, margin, printWidth, printHeight);
-      pdf.save(`戒菸教育執行記錄表_${studentData.name || '未命名'}.pdf`);
+      pdf.addImage(imgData, 'JPEG', margin, margin, printWidth, printHeight);
+      
+      // 使用 Blob 下載模式，強迫瀏覽器套用正確的 .pdf 副檔名
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `戒菸教育執行記錄表_${studentData?.name || studentData?.studentId || '未命名'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF 生成失敗', error);
       alert('產生 PDF 時發生錯誤，請稍後重試。');
