@@ -1,6 +1,8 @@
 // components/CompletionPage.tsx
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Download, FileText, User } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface CompletionPageProps {
   studentData: any;
@@ -10,6 +12,7 @@ interface CompletionPageProps {
 const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDate }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
     // 設定當前日期
@@ -23,10 +26,36 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
     setTimeout(() => setShowSuccess(true), 500);
   }, []);
 
-  const generatePDF = () => {
-    // 這裡實際應該調用 PDF 生成函數
-    // 暫時用 alert 模擬
-    alert('PDF 生成功能開發中...\n\n實際部署時會自動生成「戒菸教育執行記錄表」PDF檔案');
+  const generatePDF = async () => {
+    const element = document.getElementById('record-form');
+    if (!element) return;
+
+    try {
+      setIsGeneratingPDF(true);
+      
+      // 稍微提高 scale 可以增加 PDF 清晰度
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const margin = 10;
+      const printWidth = pdfWidth - margin * 2;
+      const printHeight = (canvas.height * printWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', margin, margin, printWidth, printHeight);
+      pdf.save(`戒菸教育執行記錄表_${studentData.name || '未命名'}.pdf`);
+    } catch (error) {
+      console.error('PDF 生成失敗', error);
+      alert('產生 PDF 時發生錯誤，請稍後重試。');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
   };
 
   const handlePrint = () => {
@@ -153,10 +182,25 @@ const CompletionPage: React.FC<CompletionPageProps> = ({ studentData, selectedDa
       <div className="flex justify-center space-x-4 mb-6">
         <button
           onClick={generatePDF}
-          className="flex items-center bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={isGeneratingPDF}
+          className={`flex items-center text-white px-6 py-3 rounded-lg transition-colors ${
+            isGeneratingPDF ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
-          <Download className="mr-2 h-5 w-5" />
-          下載 PDF
+          {isGeneratingPDF ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              PDF 產生中...
+            </>
+          ) : (
+            <>
+              <Download className="mr-2 h-5 w-5" />
+              下載 PDF
+            </>
+          )}
         </button>
         <button
           onClick={handlePrint}
